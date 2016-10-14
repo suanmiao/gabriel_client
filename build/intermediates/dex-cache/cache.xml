@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        jar="/Users/suanmiao/Dropbox/workspace/android/mine/android-client/app/build/intermediates/incremental-classes/debug/instant-run-bootstrap.jar"
+        jumboMode="true"
+        revision="23.0.2"
+        sha1="a600130f51987aaaa124a802e65945bdce334f69">
+        <dex dex="/Users/suanmiao/Dropbox/workspace/android/mine/android-client/app/build/intermediates/transforms/dex/debug/folders/1000/10/instant-run-bootstrap_e61801e9694f6998b8db293d474fab2c15f9fbe2/classes.dex" />
+    </item>
+    <item
+        jar="/Users/suanmiao/Dropbox/workspace/android/mine/android-client/app/build/intermediates/incremental-runtime-classes/debug/instant-run.jar"
+        jumboMode="true"
+        revision="23.0.2"
+        sha1="566b767ee0493a238155e7a845c76a7c129f509c">
+        <dex dex="/Users/suanmiao/Dropbox/workspace/android/mine/android-client/app/build/intermediates/transforms/dex/debug/folders/1000/10/instant-run_8f024ca7baf957c2995b98efb3a17a59cbce2183/classes.dex" />
+    </item>
+
+</items>
