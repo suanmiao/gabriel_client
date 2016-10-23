@@ -12,6 +12,7 @@ public class NetworkProtocol {
     public static final int NETWORK_RET_MESSAGE = 7;
     public static final int NETWORK_RET_DONE = 8;
     public static final int NETWORK_RET_SYNC = 9;
+    public static final int NETWORK_RET_DETECTION = 10;
 
     public static final String HEADER_MESSAGE_CONTROL = "control";
     public static final String HEADER_MESSAGE_STATUS = "status";
@@ -22,4 +23,5 @@ public class NetworkProtocol {
     public static final String HEADER_MESSAGE_IMAGE = "image";
     public static final String HEADER_MESSAGE_ANIMATION = "animation";
     public static final String HEADER_MESSAGE_SPEECH = "speech";
+    public static final String HEADER_MESSAGE_DETECTION = "detection";
 }
