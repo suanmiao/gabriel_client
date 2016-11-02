@@ -11,6 +11,8 @@ public class GlobalCache {
 
   public static GlobalCache instance;
 
+  public static int MAX_FRAME_CNT = 100;
+
   public static GlobalCache getInstance() {
     if (instance == null) {
       instance = new GlobalCache();
@@ -51,5 +53,9 @@ public class GlobalCache {
     FrameHolder holder = new FrameHolder(id, data);
     frameHolderHashMap.put(id, holder);
     frameHolderQueue.add(holder);
+    if (frameHolderQueue.size() == MAX_FRAME_CNT) {
+      FrameHolder oldHolder = frameHolderQueue.poll();
+      frameHolderHashMap.remove(oldHolder.id);
+    }
   }
 }

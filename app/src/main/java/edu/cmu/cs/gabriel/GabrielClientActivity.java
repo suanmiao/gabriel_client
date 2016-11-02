@@ -2,10 +2,6 @@ package edu.cmu.cs.gabriel;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Rect;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.hardware.Sensor;
@@ -20,7 +16,6 @@ import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.ImageView;
-import edu.cmu.cs.gabriel.model.FeatureDetectionModel;
 import edu.cmu.cs.gabriel.network.AccStreamingThread;
 import edu.cmu.cs.gabriel.network.NetworkProtocol;
 import edu.cmu.cs.gabriel.network.ResultReceivingThread;
@@ -28,6 +23,7 @@ import edu.cmu.cs.gabriel.network.VideoStreamingThread;
 import edu.cmu.cs.gabriel.token.ReceivedPacketInfo;
 import edu.cmu.cs.gabriel.token.TokenController;
 import java.io.File;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -245,60 +241,61 @@ public class GabrielClientActivity extends Activity
         receivedPacketInfo = (ReceivedPacketInfo) msg.obj;
         receivedPacketInfo.setMsgRecvTime(System.currentTimeMillis());
       }
-      //if (msg.what == NetworkProtocol.NETWORK_RET_SPEECH) {
-      //  String ttsMessage = (String) msg.obj;
-      //
-      //  if (tts != null && !tts.isSpeaking()) {
-      //    Log.d(LOG_TAG, "tts to be played: " + ttsMessage);
-      //    tts.setSpeechRate(1.5f);
-      //    String[] splitMSGs = ttsMessage.split("\\.");
-      //    HashMap<String, String> map = new HashMap<String, String>();
-      //    map.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "unique");
-      //
-      //    if (splitMSGs.length == 1) {
-      //      tts.speak(splitMSGs[0].toString().trim(), TextToSpeech.QUEUE_FLUSH,
-      //          map); // the only sentence
-      //    } else {
-      //      tts.speak(splitMSGs[0].toString().trim(), TextToSpeech.QUEUE_FLUSH,
-      //          null); // the first sentence
-      //      for (int i = 1; i < splitMSGs.length - 1; i++) {
-      //        tts.playSilence(350, TextToSpeech.QUEUE_ADD, null); // add pause for every period
-      //        tts.speak(splitMSGs[i].toString().trim(), TextToSpeech.QUEUE_ADD, null);
-      //      }
-      //      tts.playSilence(350, TextToSpeech.QUEUE_ADD, null);
-      //      tts.speak(splitMSGs[splitMSGs.length - 1].toString().trim(), TextToSpeech.QUEUE_ADD,
-      //          map); // the last sentence
-      //    }
-      //  }
-      //}
-      //if (msg.what == NetworkProtocol.NETWORK_RET_IMAGE
-      //    || msg.what == NetworkProtocol.NETWORK_RET_ANIMATION) {
-      //  Bitmap feedbackImg = (Bitmap) msg.obj;
-      //  receivedImg.setImageBitmap(feedbackImg);
-      //}
-      if (msg.what == NetworkProtocol.NETWORK_RET_DETECTION) {
-        ResultReceivingThread.DetectionHolder holder =
-            (ResultReceivingThread.DetectionHolder) (msg.obj);
-        FeatureDetectionModel[] models = holder.featureDetectionModels;
-        Paint paint = new Paint();
-        paint.setStyle(Paint.Style.STROKE);
-        if (holder.bitmap != null) {
-          Bitmap bitmap = holder.bitmap.copy(Bitmap.Config.RGB_565, true);
-          Canvas canvas = new Canvas(bitmap);
-          paint.setColor(Color.RED);
-          paint.setStrokeWidth(3);
-          paint.setTextSize(30);
-          for (FeatureDetectionModel model : models) {
-            Rect rect = model.getRect();
-            canvas.drawRect(rect, paint);
-            paint.setStrokeWidth(2);
-            canvas.drawText(model.feature, rect.centerX(), rect.centerY(), paint);
-            canvas.drawText(model.confidence + "", rect.centerX(), rect.centerY() + 40, paint);
+      if (msg.what == NetworkProtocol.NETWORK_RET_SPEECH) {
+        String ttsMessage = (String) msg.obj;
+
+        if (tts != null && !tts.isSpeaking()) {
+          Log.d(LOG_TAG, "tts to be played: " + ttsMessage);
+          //tts.setSpeechRate(1.5f);
+          tts.setSpeechRate(1f);
+          String[] splitMSGs = ttsMessage.split("\\.");
+          HashMap<String, String> map = new HashMap<String, String>();
+          map.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "unique");
+
+          if (splitMSGs.length == 1) {
+            tts.speak(splitMSGs[0].toString().trim(), TextToSpeech.QUEUE_FLUSH,
+                map); // the only sentence
+          } else {
+            tts.speak(splitMSGs[0].toString().trim(), TextToSpeech.QUEUE_FLUSH,
+                null); // the first sentence
+            for (int i = 1; i < splitMSGs.length - 1; i++) {
+              tts.playSilence(350, TextToSpeech.QUEUE_ADD, null); // add pause for every period
+              tts.speak(splitMSGs[i].toString().trim(), TextToSpeech.QUEUE_ADD, null);
+            }
+            tts.playSilence(350, TextToSpeech.QUEUE_ADD, null);
+            tts.speak(splitMSGs[splitMSGs.length - 1].toString().trim(), TextToSpeech.QUEUE_ADD,
+                map); // the last sentence
           }
-          canvas.save();
-          receivedImg.setImageBitmap(bitmap);
         }
       }
+      if (msg.what == NetworkProtocol.NETWORK_RET_IMAGE
+          || msg.what == NetworkProtocol.NETWORK_RET_ANIMATION) {
+        Bitmap feedbackImg = (Bitmap) msg.obj;
+        receivedImg.setImageBitmap(feedbackImg);
+      }
+      //if (msg.what == NetworkProtocol.NETWORK_RET_DETECTION) {
+      //  ResultReceivingThread.DetectionHolder holder =
+      //      (ResultReceivingThread.DetectionHolder) (msg.obj);
+      //  FeatureDetectionModel[] models = holder.featureDetectionModels;
+      //  Paint paint = new Paint();
+      //  paint.setStyle(Paint.Style.STROKE);
+      //  if (holder.bitmap != null) {
+      //    Bitmap bitmap = holder.bitmap.copy(Bitmap.Config.RGB_565, true);
+      //    Canvas canvas = new Canvas(bitmap);
+      //    paint.setColor(Color.RED);
+      //    paint.setStrokeWidth(3);
+      //    paint.setTextSize(30);
+      //    for (FeatureDetectionModel model : models) {
+      //      Rect rect = model.getRect();
+      //      canvas.drawRect(rect, paint);
+      //      paint.setStrokeWidth(2);
+      //      canvas.drawText(model.feature, rect.centerX(), rect.centerY(), paint);
+      //      canvas.drawText(model.confidence + "", rect.centerX(), rect.centerY() + 40, paint);
+      //    }
+      //    canvas.save();
+      //    receivedImg.setImageBitmap(bitmap);
+      //  }
+      //}
       if (msg.what == NetworkProtocol.NETWORK_RET_DONE) {
         notifyToken();
       }

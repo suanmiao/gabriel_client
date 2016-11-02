@@ -35,10 +35,10 @@ public class Const {
     /************************ Demo mode only *************************************/
     // server IP
     //public static final String SERVER_IP = "128.2.213.128";  // Cloudlet
-    public static final String SERVER_IP = "128.237.179.66";  // Local
+    public static final String SERVER_IP = "192.168.0.109";  // Local
 
     // token size
-    public static final int TOKEN_SIZE = 1;
+    public static final int TOKEN_SIZE = 100;
 
     /************************ Experiment mode only *******************************/
     // server IP list

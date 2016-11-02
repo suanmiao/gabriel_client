@@ -142,7 +142,6 @@ public class ResultReceivingThread extends Thread {
 
     try {
       JSONObject recvJSON = new JSONObject(recvData);
-      Log.e("receved string ", recvData);
       frameID = recvJSON.getLong(NetworkProtocol.HEADER_MESSAGE_FRAME_ID);
       engineID = recvJSON.getString(NetworkProtocol.HEADER_MESSAGE_ENGINE_ID);
       status=recvJSON.getString(NetworkProtocol.HEADER_MESSAGE_STATUS);

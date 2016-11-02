@@ -1,6 +1,18 @@
 package edu.cmu.cs.gabriel.network;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
+import android.hardware.Camera.Parameters;
+import android.hardware.Camera.Size;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import edu.cmu.cs.gabriel.Const;
 import edu.cmu.cs.gabriel.GlobalCache;
+import edu.cmu.cs.gabriel.token.TokenController;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -14,22 +26,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Arrays;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
-import android.hardware.Camera.Parameters;
-import android.hardware.Camera.Size;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.util.Log;
-import edu.cmu.cs.gabriel.Const;
-import edu.cmu.cs.gabriel.token.TokenController;
 
 public class VideoStreamingThread extends Thread {
 
@@ -291,6 +289,7 @@ public class VideoStreamingThread extends Thread {
             cameraImageSize.height, null);
         ByteArrayOutputStream tmpBuffer = new ByteArrayOutputStream();
         // chooses quality 67 and it roughly matches quality 5 in avconv
+        //image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 67, tmpBuffer);
         image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 67, tmpBuffer);
         this.frameBuffer = tmpBuffer.toByteArray();
         this.frameID++;
