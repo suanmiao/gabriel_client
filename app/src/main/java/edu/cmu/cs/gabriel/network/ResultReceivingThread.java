@@ -82,7 +82,7 @@ public class ResultReceivingThread extends Thread {
       return;
     }
 
-    while (isRunning == true) {
+    while (isRunning) {
       try {
         String recvMsg = this.receiveMsg(networkReader);
         this.notifyReceivedData(recvMsg);
@@ -144,7 +144,7 @@ public class ResultReceivingThread extends Thread {
       JSONObject recvJSON = new JSONObject(recvData);
       frameID = recvJSON.getLong(NetworkProtocol.HEADER_MESSAGE_FRAME_ID);
       engineID = recvJSON.getString(NetworkProtocol.HEADER_MESSAGE_ENGINE_ID);
-      status=recvJSON.getString(NetworkProtocol.HEADER_MESSAGE_STATUS);
+      status = recvJSON.getString(NetworkProtocol.HEADER_MESSAGE_STATUS);
       dataSize = recvJSON.getInt(NetworkProtocol.HEADER_MESSAGE_DATA_SIZE);
 
       Message msg = Message.obtain();

@@ -163,9 +163,9 @@ public class VideoStreamingThread extends Thread {
           continue;
         }
 
-                /*
-                 * The first part is pinging to synchronize time with the server every time the applications starts
-                 */
+    /*
+    * The first part is pinging to synchronize time with the server every time the applications starts
+    */
         if (Const.IS_EXPERIMENT) {
           if (isPing) {
             isPing = false;
@@ -213,9 +213,9 @@ public class VideoStreamingThread extends Thread {
           }
         }
 
-                /*
-                 * The second part is to stream real data to the server.
-                 */
+       /*
+        * The second part is to stream real data to the server.
+        */
         // get data in the frame buffer
         byte[] data = null;
         long dataTime = 0;
