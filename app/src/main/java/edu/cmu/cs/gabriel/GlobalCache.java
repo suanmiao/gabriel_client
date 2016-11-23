@@ -1,5 +1,7 @@
 package edu.cmu.cs.gabriel;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -13,9 +15,9 @@ public class GlobalCache {
 
   public static int MAX_FRAME_CNT = 100;
 
-  public static GlobalCache getInstance() {
+  public static GlobalCache getInstance(Context context) {
     if (instance == null) {
-      instance = new GlobalCache();
+      instance = new GlobalCache(context);
     }
     return instance;
   }
@@ -33,7 +35,14 @@ public class GlobalCache {
   public Queue<FrameHolder> frameHolderQueue;
   public HashMap<Long, FrameHolder> frameHolderHashMap;
 
-  public GlobalCache() {
+  public GlobalCache(Context context) {
+    ActivityManager actManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+    ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
+    actManager.getMemoryInfo(memInfo);
+    long totalMemory = memInfo.totalMem;
+    if(totalMemory < 710217984){
+      MAX_FRAME_CNT = 20;
+    }
     frameHolderQueue = new LinkedList<FrameHolder>();
     frameHolderHashMap = new HashMap<Long, FrameHolder>();
   }

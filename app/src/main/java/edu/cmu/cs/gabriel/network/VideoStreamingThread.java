@@ -1,5 +1,6 @@
 package edu.cmu.cs.gabriel.network;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
@@ -59,9 +60,11 @@ public class VideoStreamingThread extends Thread {
 
   private Handler networkHandler = null;
   private TokenController tokenController = null;
+  private Context context;
 
   public VideoStreamingThread(String serverIP, int port, Handler handler,
-      TokenController tokenController) {
+      TokenController tokenController, Context context) {
+    this.context = context;
     isRunning = false;
     this.networkHandler = handler;
     this.tokenController = tokenController;
@@ -243,7 +246,7 @@ public class VideoStreamingThread extends Thread {
 
           sendingFrameID = this.frameID;
 
-          GlobalCache.getInstance().enqueue(sendingFrameID, data);
+          GlobalCache.getInstance(context).enqueue(sendingFrameID, data);
           Log.v(LOG_TAG, "sending:" + sendingFrameID);
           this.frameBuffer = null;
         }

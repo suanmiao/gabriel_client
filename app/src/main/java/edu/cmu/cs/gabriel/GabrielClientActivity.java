@@ -146,12 +146,12 @@ public class GabrielClientActivity extends Activity
 
     tokenController = new TokenController(tokenSize, latencyFile);
     resultThread =
-        new ResultReceivingThread(serverIP, Const.RESULT_RECEIVING_PORT, returnMsgHandler);
+        new ResultReceivingThread(serverIP, Const.RESULT_RECEIVING_PORT, returnMsgHandler, this);
     resultThread.start();
 
     videoStreamingThread =
         new VideoStreamingThread(serverIP, Const.VIDEO_STREAM_PORT, returnMsgHandler,
-            tokenController);
+            tokenController, this);
     videoStreamingThread.start();
   }
 

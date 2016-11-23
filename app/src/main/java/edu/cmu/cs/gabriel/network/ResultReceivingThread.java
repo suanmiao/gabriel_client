@@ -1,5 +1,6 @@
 package edu.cmu.cs.gabriel.network;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Handler;
@@ -47,13 +48,16 @@ public class ResultReceivingThread extends Thread {
   private int nAnimationFrames = -1;
 
   private Gson mGson;
+  private Context context;
 
   public static class DetectionHolder {
     public Bitmap bitmap;
     public FeatureDetectionModel[] featureDetectionModels;
   }
 
-  public ResultReceivingThread(String serverIP, int port, Handler returnMsgHandler) {
+  public ResultReceivingThread(String serverIP, int port, Handler returnMsgHandler,
+      Context context) {
+    this.context = context;
     isRunning = false;
     this.returnMsgHandler = returnMsgHandler;
     try {
@@ -211,11 +215,12 @@ public class ResultReceivingThread extends Thread {
         msg = Message.obtain();
         msg.what = NetworkProtocol.NETWORK_RET_DETECTION;
         DetectionHolder holder = new DetectionHolder();
-        GlobalCache.FrameHolder frameHolder = GlobalCache.getInstance().getFrameById(frameID);
+        GlobalCache.FrameHolder frameHolder =
+            GlobalCache.getInstance(context).getFrameById(frameID);
         if (frameHolder != null) {
           holder.bitmap =
               BitmapFactory.decodeByteArray(frameHolder.data, 0, frameHolder.data.length);
-          GlobalCache.getInstance().clearOldItems(frameID);
+          GlobalCache.getInstance(context).clearOldItems(frameID);
         }
         holder.featureDetectionModels = array;
         msg.obj = holder;
