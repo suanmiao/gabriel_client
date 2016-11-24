@@ -1,8 +1,6 @@
 package edu.cmu.cs.gabriel.network;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera.Parameters;
@@ -11,24 +9,16 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import edu.cmu.cs.gabriel.Const;
 import edu.cmu.cs.gabriel.GlobalCache;
 import edu.cmu.cs.gabriel.token.TokenController;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Arrays;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class VideoStreamingThread extends Thread {
 
@@ -36,14 +26,6 @@ public class VideoStreamingThread extends Thread {
 
   private boolean isRunning = false;
   private boolean isPing = true;
-
-  // image files for experiments (test and compression)
-  private File[] imageFiles = null;
-  private File[] imageFilesCompress = null;
-  private Bitmap[] imageBitmapsCompress = new Bitmap[30];
-  private int indexImageFile = 0;
-  private int indexImageFileCompress = 0;
-  private int imageFileCompressLength = -1;
 
   // TCP connection
   private InetAddress remoteIP;
@@ -62,6 +44,9 @@ public class VideoStreamingThread extends Thread {
   private TokenController tokenController = null;
   private Context context;
 
+  //test code
+  private long prev_token = -1;
+
   public VideoStreamingThread(String serverIP, int port, Handler handler,
       TokenController tokenController, Context context) {
     this.context = context;
@@ -75,69 +60,6 @@ public class VideoStreamingThread extends Thread {
       Log.e(LOG_TAG, "unknown host: " + e.getMessage());
     }
     remotePort = port;
-
-    if (Const.LOAD_IMAGES) {
-      // check input data at image directory
-      imageFiles = this.getImageFiles(Const.TEST_IMAGE_DIR);
-      if (imageFiles.length == 0) {
-        // TODO: notify error to the main thread
-        Log.e(LOG_TAG, "test image directory empty!");
-      } else {
-        Log.i(LOG_TAG, "Number of image files in the input folder: " + imageFiles.length);
-      }
-    }
-
-    if (Const.IS_EXPERIMENT) {
-      imageFilesCompress = this.getImageFiles(Const.COMPRESS_IMAGE_DIR);
-      int i = 0;
-      for (File path : imageFilesCompress) {
-        //          BitmapFactory.Options options = new BitmapFactory.Options();
-        //            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-        Bitmap bitmap = BitmapFactory.decodeFile(path.getPath());
-        imageBitmapsCompress[i] = bitmap;
-        i++;
-        if (i == Const.MAX_COMPRESS_IMAGE) break;
-      }
-      imageFileCompressLength = i;
-    }
-  }
-
-  /**
-   * @return all files within @imageDir
-   */
-  private File[] getImageFiles(File imageDir) {
-    if (imageDir == null) {
-      return null;
-    }
-    File[] files = imageDir.listFiles(new FilenameFilter() {
-      @Override public boolean accept(File dir, String filename) {
-        if (filename.toLowerCase().endsWith("jpg")) return true;
-        if (filename.toLowerCase().endsWith("jpeg")) return true;
-        if (filename.toLowerCase().endsWith("png")) return true;
-        if (filename.toLowerCase().endsWith("bmp")) return true;
-        return false;
-      }
-    });
-    Arrays.sort(files);
-    return files;
-  }
-
-  /**
-   * @return a String representing the received message from @reader
-   */
-  private String receiveMsg(DataInputStream reader) throws IOException {
-    int retLength = reader.readInt();
-    byte[] recvByte = new byte[retLength];
-    int readSize = 0;
-    while (readSize < retLength) {
-      int ret = reader.read(recvByte, readSize, retLength - readSize);
-      if (ret <= 0) {
-        break;
-      }
-      readSize += ret;
-    }
-    String receivedString = new String(recvByte);
-    return receivedString;
   }
 
   public void run() {
@@ -160,60 +82,18 @@ public class VideoStreamingThread extends Thread {
 
     while (this.isRunning) {
       try {
+        ///test code
+        if (prev_token != this.tokenController.getCurrentToken()) {
+          //Log.e("suan token change ",
+          //    "prev: " + prev_token + ", current token " + this.tokenController.getCurrentToken());
+        }
+
+        prev_token = this.tokenController.getCurrentToken();
+
         // check token
         if (this.tokenController.getCurrentToken() <= 0) {
           Log.w(LOG_TAG, "no token available");
           continue;
-        }
-
-    /*
-    * The first part is pinging to synchronize time with the server every time the applications starts
-    */
-        if (Const.IS_EXPERIMENT) {
-          if (isPing) {
-            isPing = false;
-            long min_diff = 1000000;
-            long bestSentTime = 0, bestServerTime = 0, bestRecvTime = 0;
-            for (int i = 0; i < Const.MAX_PING_TIMES; i++) {
-              // send current time to server
-              ByteArrayOutputStream baos = new ByteArrayOutputStream();
-              DataOutputStream dos = new DataOutputStream(baos);
-              long sentTime = System.currentTimeMillis();
-              byte[] jsonData = ("{\"sync_time\":" + sentTime + "}").getBytes();
-              dos.writeInt(jsonData.length);
-              dos.write(jsonData);
-              networkWriter.write(baos.toByteArray());
-              networkWriter.flush();
-
-              // receive current time at server
-              String recvMsg = this.receiveMsg(networkReader);
-              long serverTime = -1;
-              try {
-                JSONObject obj = new JSONObject(recvMsg);
-                serverTime = obj.getLong("sync_time");
-              } catch (JSONException e) {
-                Log.e(LOG_TAG, "Sync time with server error!!");
-              }
-
-              long recvTime = System.currentTimeMillis();
-              if (recvTime - sentTime < min_diff) {
-                min_diff = recvTime - sentTime;
-                bestSentTime = sentTime;
-                bestServerTime = serverTime;
-                bestRecvTime = recvTime;
-              }
-            }
-
-            // send message to token controller, actually for logging...
-            Message msg = Message.obtain();
-            msg.what = NetworkProtocol.NETWORK_RET_SYNC;
-            String sync_str =
-                "" + bestSentTime + "\t" + bestServerTime + "\t" + bestRecvTime + "\n";
-            msg.obj = sync_str;
-            tokenController.tokenHandler.sendMessage(msg);
-
-            continue;
-          }
         }
 
        /*
@@ -229,20 +109,11 @@ public class VideoStreamingThread extends Thread {
             try {
               frameLock.wait();
             } catch (InterruptedException e) {
+              e.printStackTrace();
             }
           }
           data = this.frameBuffer;
           dataTime = System.currentTimeMillis();
-
-          if (Const.IS_EXPERIMENT) { // compress pre-loaded file in experiment mode
-            long tStartCompressing = System.currentTimeMillis();
-            ByteArrayOutputStream bufferNoUse = new ByteArrayOutputStream();
-            imageBitmapsCompress[indexImageFileCompress].compress(Bitmap.CompressFormat.JPEG, 67,
-                bufferNoUse);
-            Log.v(LOG_TAG, "Compressing time: " + (System.currentTimeMillis() - tStartCompressing));
-            indexImageFileCompress = (indexImageFileCompress + 1) % imageFileCompressLength;
-            compressedTime = System.currentTimeMillis();
-          }
 
           sendingFrameID = this.frameID;
 
@@ -284,36 +155,17 @@ public class VideoStreamingThread extends Thread {
    * Puts the new frame into the @frameBuffer
    */
   public void push(byte[] frame, Parameters parameters) {
-
-    if (!Const.LOAD_IMAGES) { // use real-time captured images
-      synchronized (frameLock) {
-        Size cameraImageSize = parameters.getPreviewSize();
-        YuvImage image = new YuvImage(frame, parameters.getPreviewFormat(), cameraImageSize.width,
-            cameraImageSize.height, null);
-        ByteArrayOutputStream tmpBuffer = new ByteArrayOutputStream();
-        // chooses quality 67 and it roughly matches quality 5 in avconv
-        //image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 67, tmpBuffer);
-        image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 67, tmpBuffer);
-        this.frameBuffer = tmpBuffer.toByteArray();
-        this.frameID++;
-        frameLock.notify();
-      }
-    } else { // use pre-captured images
-      try {
-        long dataTime = System.currentTimeMillis();
-        int dataSize = (int) this.imageFiles[indexImageFile].length();
-        FileInputStream fi = new FileInputStream(this.imageFiles[indexImageFile]);
-        byte[] buffer = new byte[dataSize];
-        fi.read(buffer, 0, dataSize);
-        synchronized (frameLock) {
-          this.frameBuffer = buffer;
-          this.frameID++;
-          frameLock.notify();
-        }
-        indexImageFile = (indexImageFile + 1) % this.imageFiles.length;
-      } catch (FileNotFoundException e) {
-      } catch (IOException e) {
-      }
+    synchronized (frameLock) {
+      Size cameraImageSize = parameters.getPreviewSize();
+      YuvImage image = new YuvImage(frame, parameters.getPreviewFormat(), cameraImageSize.width,
+          cameraImageSize.height, null);
+      ByteArrayOutputStream tmpBuffer = new ByteArrayOutputStream();
+      // chooses quality 67 and it roughly matches quality 5 in avconv
+      //image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 67, tmpBuffer);
+      image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 67, tmpBuffer);
+      this.frameBuffer = tmpBuffer.toByteArray();
+      this.frameID++;
+      frameLock.notify();
     }
   }
 

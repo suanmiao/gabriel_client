@@ -204,6 +204,18 @@ public class ResultReceivingThread extends Thread {
         this.returnMsgHandler.sendMessage(msg);
       }
 
+      byte[] aedStateData =
+          parseReceivedDataByType(recvJSON, data, NetworkProtocol.HEADER_MESSAGE_AED_STATE);
+      if (aedStateData != null) {
+        String aedStateString = new String(aedStateData);
+        msg = Message.obtain();
+        msg.what = NetworkProtocol.NETWORK_RET_AED_STATE;
+        msg.obj = aedStateString;
+        Log.d(LOG_TAG, "aed state: " + aedStateString);
+        //uncomment to let tts speek
+        this.returnMsgHandler.sendMessage(msg);
+      }
+
       // animation guidance
       byte[] detectionData =
           parseReceivedDataByType(recvJSON, data, NetworkProtocol.HEADER_MESSAGE_DETECTION);

@@ -5,8 +5,6 @@ import java.io.File;
 import android.os.Environment;
 
 public class Const {
-  // whether to do a demo or a set of experiments
-  public static final boolean IS_EXPERIMENT = false;
 
   // whether to use real-time captured images or load images from files for testing
   public static final boolean LOAD_IMAGES = false;
