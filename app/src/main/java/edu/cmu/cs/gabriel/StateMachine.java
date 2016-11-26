@@ -18,17 +18,21 @@ public class StateMachine {
   public static final int STATE_AED_PLUGIN = 2;
   public static final int STATE_AED_SHOCK = 3;
 
-  private int state = STATE_NONE;
+  public static final int TIMEOUT_NONE = -100;
+
+  private int state = -2;
   private Handler uiHandler;
   public HashMap<Integer, String> stageVoiceMap = new HashMap<Integer, String>();
 
   public static class StateModel {
-    public int aed_state;
-    public String tpod_state;
+    public int state;
+    public int timeout = TIMEOUT_NONE;
   }
 
   public interface StateChangeCallback {
-    public void onChange(int prevState, int currentState);
+    void onChange(int prevState, int currentState);
+
+    void onTimeout(int stage);
   }
 
   public List<StateChangeCallback> stateChangeCallbacks = new ArrayList<StateChangeCallback>();
@@ -72,6 +76,16 @@ public class StateMachine {
       @Override public void run() {
         for (StateChangeCallback callback : stateChangeCallbacks) {
           callback.onChange(prevState, currentState);
+        }
+      }
+    });
+  }
+
+  public void broadcastTimeout(final int currentState) {
+    uiHandler.post(new Runnable() {
+      @Override public void run() {
+        for (StateChangeCallback callback : stateChangeCallbacks) {
+          callback.onTimeout(currentState);
         }
       }
     });

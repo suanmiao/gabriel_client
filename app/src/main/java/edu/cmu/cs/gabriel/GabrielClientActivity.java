@@ -88,7 +88,13 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity implements S
     //voice and state machine
     StateMachine.getInstance().registerStateChangeCallback(new StateMachine.StateChangeCallback() {
       @Override public void onChange(int prevState, int currentState) {
-        speechHelper.speech(StateMachine.getInstance().getVoiceInstruction(currentState));
+        Log.e("suan stage change ", "" + currentState);
+        speechHelper.playInstructionSound(currentState);
+      }
+
+      @Override public void onTimeout(int stage) {
+        Log.e("suan timeout ", "" + stage);
+        speechHelper.playTimeoutSound(stage);
       }
     });
 
@@ -179,7 +185,10 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity implements S
       if (msg.what == NetworkProtocol.NETWORK_RET_AED_STATE) {
         String stageString = (String) msg.obj;
         StateMachine.StateModel model = mGson.fromJson(stageString, StateMachine.StateModel.class);
-        StateMachine.getInstance().updateState(model.aed_state);
+        if (model.timeout != -100) {
+          StateMachine.getInstance().broadcastTimeout(model.timeout);
+        }
+        StateMachine.getInstance().updateState(model.state);
       }
       //if (msg.what == NetworkProtocol.NETWORK_RET_DETECTION) {
       //  ResultReceivingThread.DetectionHolder holder =

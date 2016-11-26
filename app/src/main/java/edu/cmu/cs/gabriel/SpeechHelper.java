@@ -1,11 +1,19 @@
 package edu.cmu.cs.gabriel;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
+import android.media.MediaPlayer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import java.util.HashMap;
 import java.util.Locale;
+
+import static edu.cmu.cs.gabriel.StateMachine.STATE_AED_FOUND;
+import static edu.cmu.cs.gabriel.StateMachine.STATE_AED_ON;
+import static edu.cmu.cs.gabriel.StateMachine.STATE_AED_PLUGIN;
+import static edu.cmu.cs.gabriel.StateMachine.STATE_AED_SHOCK;
+import static edu.cmu.cs.gabriel.StateMachine.STATE_NONE;
 
 /**
  * Created by suanmiao on 23/11/2016.
@@ -14,12 +22,70 @@ import java.util.Locale;
 public class SpeechHelper implements TextToSpeech.OnInitListener {
   private static final String LOG_TAG = "Speech";
 
+  private MediaPlayer player;
+
   private TextToSpeech tts = null;
   private Context context;
+  public HashMap<Integer, String> stageInstructionMap = new HashMap<Integer, String>();
+  public HashMap<Integer, String> timeoutInstructionMap = new HashMap<Integer, String>();
 
   public SpeechHelper(Context context) {
     this.context = context;
-    tts = new TextToSpeech(context, this);
+    //tts = new TextToSpeech(context, this);
+    this.player = new MediaPlayer();
+    stageInstructionMap.put(STATE_NONE, "1.wav");
+    stageInstructionMap.put(STATE_AED_FOUND, "2.wav");
+    stageInstructionMap.put(STATE_AED_ON, "3.wav");
+    stageInstructionMap.put(STATE_AED_PLUGIN, "4.wav");
+    stageInstructionMap.put(STATE_AED_SHOCK, "5.wav");
+
+    timeoutInstructionMap.put(STATE_NONE, "6.wav");
+    timeoutInstructionMap.put(STATE_AED_FOUND, "7.wav");
+    timeoutInstructionMap.put(STATE_AED_ON, "8.wav");
+    timeoutInstructionMap.put(STATE_AED_PLUGIN, "9.wav");
+    timeoutInstructionMap.put(STATE_AED_SHOCK, "10.wav");
+  }
+
+  public void playInstructionSound(int stage) {
+    if (!stageInstructionMap.containsKey(stage)) {
+      return;
+    }
+    String assetPath = stageInstructionMap.get(stage);
+    playSound(assetPath);
+  }
+
+  public void playTimeoutSound(int stage) {
+    if (!timeoutInstructionMap.containsKey(stage)) {
+      return;
+    }
+    String assetPath = timeoutInstructionMap.get(stage);
+    playSound(assetPath);
+  }
+
+  private void playSound(String path) {
+    Log.e("suan play sound", "path " + path);
+    try {
+      if (player != null) {
+        if (player.isPlaying()) {
+          player.stop();
+        }
+        player.reset();
+        player = new MediaPlayer();
+      }
+
+      AssetFileDescriptor descriptor = context.getAssets().openFd(path);
+      player.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
+          descriptor.getLength());
+      descriptor.close();
+
+      player.prepare();
+      player.setVolume(1f, 1f);
+      player.setLooping(false);
+      player.start();
+      Log.e("suan play sound", "play start " + path);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   public void speech(String ttsMessage) {
@@ -87,6 +153,9 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       tts.stop();
       tts.shutdown();
       tts = null;
+    }
+    if (player != null) {
+      player.release();
     }
   }
 }
