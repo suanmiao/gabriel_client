@@ -92,7 +92,7 @@ public class VideoStreamingThread extends Thread {
 
         // check token
         if (this.tokenController.getCurrentToken() <= 0) {
-          Log.w(LOG_TAG, "no token available");
+          Log.e(LOG_TAG, "no token available");
           continue;
         }
 
@@ -104,7 +104,9 @@ public class VideoStreamingThread extends Thread {
         long dataTime = 0;
         long compressedTime = 0;
         long sendingFrameID = 0;
+        Log.e(LOG_TAG, "waiting for lock");
         synchronized (frameLock) {
+          Log.e(LOG_TAG, "frame buffer might be null" + this.frameBuffer);
           while (this.frameBuffer == null) {
             try {
               frameLock.wait();
@@ -112,6 +114,7 @@ public class VideoStreamingThread extends Thread {
               e.printStackTrace();
             }
           }
+          Log.e(LOG_TAG, "begin sending" + this.frameBuffer);
           data = this.frameBuffer;
           dataTime = System.currentTimeMillis();
 
@@ -121,6 +124,7 @@ public class VideoStreamingThread extends Thread {
           Log.v(LOG_TAG, "sending:" + sendingFrameID);
           this.frameBuffer = null;
         }
+        Log.v(LOG_TAG, "beging sending" + sendingFrameID);
 
         // make it as a single packet
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -140,6 +144,7 @@ public class VideoStreamingThread extends Thread {
         this.tokenController.decreaseToken();
         networkWriter.write(baos.toByteArray());
         networkWriter.flush();
+        Log.v(LOG_TAG, "finish sending" + sendingFrameID);
       } catch (IOException e) {
         Log.e(LOG_TAG, "Error in sending packet: " + e);
         this.notifyError(e.getMessage());
@@ -148,6 +153,7 @@ public class VideoStreamingThread extends Thread {
       }
     }
     this.isRunning = false;
+    Log.e(LOG_TAG, "finish streaming thread");
   }
 
   /**
@@ -156,6 +162,7 @@ public class VideoStreamingThread extends Thread {
    */
   public void push(byte[] frame, Parameters parameters) {
     synchronized (frameLock) {
+      Log.d("frame", "compress");
       Size cameraImageSize = parameters.getPreviewSize();
       YuvImage image = new YuvImage(frame, parameters.getPreviewFormat(), cameraImageSize.width,
           cameraImageSize.height, null);

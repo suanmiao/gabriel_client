@@ -161,6 +161,7 @@ public class ResultReceivingThread extends Thread {
       byte[] imageData =
           parseReceivedDataByType(recvJSON, data, NetworkProtocol.HEADER_MESSAGE_IMAGE);
       if (imageData != null) {
+        Log.d("frame", "receive image ");
         imageFeedback = BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
         msg = Message.obtain();
         msg.what = NetworkProtocol.NETWORK_RET_IMAGE;
