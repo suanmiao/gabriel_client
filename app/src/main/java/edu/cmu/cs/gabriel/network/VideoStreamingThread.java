@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import edu.cmu.cs.gabriel.GlobalCache;
+import edu.cmu.cs.gabriel.StateMachine;
 import edu.cmu.cs.gabriel.token.TokenController;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -44,8 +45,6 @@ public class VideoStreamingThread extends Thread {
   private TokenController tokenController = null;
   private Context context;
 
-  //test code
-  private long prev_token = -1;
 
   public VideoStreamingThread(String serverIP, int port, Handler handler,
       TokenController tokenController, Context context) {
@@ -82,13 +81,7 @@ public class VideoStreamingThread extends Thread {
 
     while (this.isRunning) {
       try {
-        ///test code
-        if (prev_token != this.tokenController.getCurrentToken()) {
-          //Log.e("suan token change ",
-          //    "prev: " + prev_token + ", current token " + this.tokenController.getCurrentToken());
-        }
-
-        prev_token = this.tokenController.getCurrentToken();
+        StateMachine.getInstance().updateTokenSize(this.tokenController.getCurrentToken());
 
         // check token
         if (this.tokenController.getCurrentToken() <= 0) {

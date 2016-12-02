@@ -1,34 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:keepScreenOn="true"
-    android:orientation="vertical" >
-    
-    <LinearLayout
-        android:layout_width="fill_parent"
+    android:orientation="vertical"
+    >
+
+  <LinearLayout
+      android:layout_width="fill_parent"
+      android:layout_height="fill_parent"
+      android:orientation="horizontal"
+      android:weightSum="1"
+      >
+
+    <Space
+        android:layout_width="10dp"
         android:layout_height="fill_parent"
-        android:orientation="horizontal"
-        android:weightSum="1" >
+        />
 
-        <Space
-            android:layout_width="10dp"
-            android:layout_height="fill_parent"/>
-        
-        <ImageView
-            android:id="@+id/guidance_image"
-            android:layout_width="300dp"
-            android:layout_height="300dp" />
+    <ImageView
+        android:id="@+id/guidance_image"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        />
 
-        <Space
-            android:layout_width="10dp"
-            android:layout_height="fill_parent"/>
-        
-        <edu.cmu.cs.gabriel.CameraPreview
-            android:id="@+id/camera_preview"
-            android:layout_width="300dp"
-            android:layout_height="300dp" />
-            
-    </LinearLayout>
+    <Space
+        android:layout_width="10dp"
+        android:layout_height="fill_parent"
+        />
 
-</LinearLayout>
+    <edu.cmu.cs.gabriel.CameraPreview
+        android:id="@+id/camera_preview"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        />
+
+  </LinearLayout>
+
+  <include
+      layout="@layout/activity_new"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      />
+</FrameLayout>

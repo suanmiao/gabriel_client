@@ -20,7 +20,7 @@ public class BaseVoiceCommandActivity extends Activity {
     Log.v(LOG_TAG, "++onCreate");
     super.onCreate(savedInstanceState);
     getWindow().requestFeature(WindowUtils.FEATURE_VOICE_COMMANDS);
-    setContentView(R.layout.activity_main);
+    setContentView(R.layout.activity_new);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED +
         WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON +
         WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

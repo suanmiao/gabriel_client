@@ -3,17 +3,13 @@ package edu.cmu.cs.gabriel;
 import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.TextView;
 import com.google.gson.Gson;
-import edu.cmu.cs.gabriel.network.AccStreamingThread;
 import edu.cmu.cs.gabriel.network.NetworkProtocol;
 import edu.cmu.cs.gabriel.network.ResultReceivingThread;
 import edu.cmu.cs.gabriel.network.VideoStreamingThread;
@@ -21,30 +17,75 @@ import edu.cmu.cs.gabriel.token.ReceivedPacketInfo;
 import edu.cmu.cs.gabriel.token.TokenController;
 import java.io.File;
 
-public class GabrielClientActivity extends BaseVoiceCommandActivity implements SensorEventListener {
+public class GabrielClientActivity extends BaseVoiceCommandActivity {
 
   private static final String LOG_TAG = "Main";
 
   // major components for streaming sensor data and receiving information
   private VideoStreamingThread videoStreamingThread = null;
-  private AccStreamingThread accStreamingThread = null;
   private ResultReceivingThread resultThread = null;
   private TokenController tokenController = null;
 
   private boolean isRunning = false;
   private CameraPreview preview = null;
 
-  private SensorManager sensorManager = null;
-  private Sensor sensorAcc = null;
-
   private ReceivedPacketInfo receivedPacketInfo = null;
-  private ImageView receivedImg;
   private Gson mGson = new Gson();
+  private ListView listMain;
+  private TextView textOverall;
+  private TextView textDetail;
+  private StateMachine.StateChangeCallback mStateChangeCallback;
+  private SListAdapter adapter;
 
   @Override protected void onCreate(Bundle savedInstanceState) {
     Log.v(LOG_TAG, "++onCreate");
     super.onCreate(savedInstanceState);
-    receivedImg = (ImageView) findViewById(R.id.guidance_image);
+    initWidget();
+    initData();
+  }
+
+  private void initWidget() {
+    listMain = (ListView) findViewById(R.id.main_list);
+    textOverall = (TextView) findViewById(R.id.main_text_overall_status);
+    textDetail = (TextView) findViewById(R.id.main_text_detail_status);
+    adapter = new SListAdapter(this);
+    listMain.setAdapter(adapter);
+  }
+
+  public void initData() {
+    StateMachine.getInstance()
+        .registerAEDStateChangeCallback(new StateMachine.StateChangeCallback() {
+          @Override public void onChange(int prevState, int currentState) {
+            Log.e("suan stage change ", "" + currentState);
+            speechHelper.playInstructionSound(currentState);
+            Util.bindOverallState(textOverall);
+            Util.bindStateText(adapter, currentState);
+            listMain.setSelection(adapter.getCount() - 1);
+          }
+        });
+    StateMachine.getInstance()
+        .registerTimeoutStateChangeCallback(new StateMachine.StateChangeCallback() {
+          @Override public void onChange(int prevState, int currentState) {
+            Log.e("suan timeout ", "" + currentState);
+            speechHelper.playTimeoutSound(currentState);
+            Util.bindOverallState(textOverall);
+            Util.bindTimeoutText(adapter, currentState);
+            listMain.setSelection(adapter.getCount() - 1);
+          }
+        });
+    mStateChangeCallback = new StateMachine.StateChangeCallback() {
+      @Override public void onChange(int prevState, int currentState) {
+        Util.bindDetailState(textDetail);
+      }
+    };
+    StateMachine.getInstance().registerAEDFoundStateChangeCallback(mStateChangeCallback);
+    StateMachine.getInstance().registerYellowFlashStateChangeCallback(mStateChangeCallback);
+    StateMachine.getInstance().registerYellowPlugStateChangeCallback(mStateChangeCallback);
+    StateMachine.getInstance().registerOrangeFlashStateChangeCallback(mStateChangeCallback);
+    StateMachine.getInstance().registerTokenSizeChangeCallback(mStateChangeCallback);
+
+    Util.bindOverallState(textOverall);
+    Util.bindDetailState(textDetail);
   }
 
   @Override protected void onResume() {
@@ -78,26 +119,6 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity implements S
     Const.ROOT_DIR.mkdirs();
     Const.EXP_DIR.mkdirs();
 
-    // IMU sensors
-    if (sensorManager == null) {
-      sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-      sensorAcc = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-      sensorManager.registerListener(this, sensorAcc, SensorManager.SENSOR_DELAY_NORMAL);
-    }
-
-    //voice and state machine
-    StateMachine.getInstance().registerStateChangeCallback(new StateMachine.StateChangeCallback() {
-      @Override public void onChange(int prevState, int currentState) {
-        Log.e("suan stage change ", "" + currentState);
-        speechHelper.playInstructionSound(currentState);
-      }
-
-      @Override public void onTimeout(int stage) {
-        Log.e("suan timeout ", "" + stage);
-        speechHelper.playTimeoutSound(stage);
-      }
-    });
-
     isRunning = true;
   }
 
@@ -113,10 +134,6 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity implements S
     if ((videoStreamingThread != null) && (videoStreamingThread.isAlive())) {
       videoStreamingThread.stopStreaming();
       videoStreamingThread = null;
-    }
-    if ((accStreamingThread != null) && (accStreamingThread.isAlive())) {
-      accStreamingThread.stopStreaming();
-      accStreamingThread = null;
     }
     if ((resultThread != null) && (resultThread.isAlive())) {
       resultThread.close();
@@ -180,15 +197,16 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity implements S
       if (msg.what == NetworkProtocol.NETWORK_RET_IMAGE
           || msg.what == NetworkProtocol.NETWORK_RET_ANIMATION) {
         Bitmap feedbackImg = (Bitmap) msg.obj;
-        receivedImg.setImageBitmap(feedbackImg);
       }
       if (msg.what == NetworkProtocol.NETWORK_RET_AED_STATE) {
         String stageString = (String) msg.obj;
-        StateMachine.StateModel model = mGson.fromJson(stageString, StateMachine.StateModel.class);
-        if (model.timeout != -100) {
-          StateMachine.getInstance().broadcastTimeout(model.timeout);
+        try {
+          StateMachine.StateModel model =
+              mGson.fromJson(stageString, StateMachine.StateModel.class);
+          StateMachine.getInstance().updateState(model);
+        } catch (Exception e) {
+          e.printStackTrace();
         }
-        StateMachine.getInstance().updateState(model.state);
       }
       //if (msg.what == NetworkProtocol.NETWORK_RET_DETECTION) {
       //  ResultReceivingThread.DetectionHolder holder =
@@ -235,10 +253,6 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity implements S
       videoStreamingThread.stopStreaming();
       videoStreamingThread = null;
     }
-    if ((accStreamingThread != null) && (accStreamingThread.isAlive())) {
-      accStreamingThread.stopStreaming();
-      accStreamingThread = null;
-    }
     if (tokenController != null) {
       tokenController.close();
       tokenController = null;
@@ -251,25 +265,5 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity implements S
       preview.close();
       preview = null;
     }
-    if (sensorManager != null) {
-      sensorManager.unregisterListener(this);
-      sensorManager = null;
-      sensorAcc = null;
-    }
   }
-
-  /**************** SensorEventListener ***********************/
-  // TODO: test accelerometer streaming
-  @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {
-  }
-
-  @Override public void onSensorChanged(SensorEvent event) {
-    if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) return;
-    if (accStreamingThread != null) {
-      //          accStreamingThread.push(event.values);
-    }
-    // Log.d(LOG_TAG, "acc_x : " + mSensorX + "\tacc_y : " + mSensorY);
-  }
-  /**************** End of SensorEventListener ****************/
-
 }
