@@ -1,12 +1,16 @@
 package edu.cmu.cs.gabriel;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Vibrator;
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.View;
 import android.widget.ListView;
 import android.widget.TextView;
 import com.google.gson.Gson;
@@ -36,6 +40,10 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
   private TextView textDetail;
   private StateMachine.StateChangeCallback mStateChangeCallback;
   private SListAdapter adapter;
+  private int clickTime = 0;
+  private long lastClickTime = 0;
+  private Vibrator vibrator;
+  private String configedIP = "";
 
   @Override protected void onCreate(Bundle savedInstanceState) {
     Log.v(LOG_TAG, "++onCreate");
@@ -50,9 +58,30 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
     textDetail = (TextView) findViewById(R.id.main_text_detail_status);
     adapter = new SListAdapter(this);
     listMain.setAdapter(adapter);
+    vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+
+    textOverall.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View v) {
+        vibrator.vibrate(30);
+        long time = System.currentTimeMillis();
+        if (time - lastClickTime < 1000) {
+          clickTime++;
+          if (clickTime == 5) {
+            startActivity(new Intent(GabrielClientActivity.this, ConfigActivity.class));
+            finish();
+            clickTime = 0;
+          }
+        }
+        lastClickTime = time;
+      }
+    });
   }
 
   public void initData() {
+    Intent intent = getIntent();
+    if (intent != null && !TextUtils.isEmpty(intent.getStringExtra(ConfigActivity.KEY_IP))) {
+      configedIP = intent.getStringExtra(ConfigActivity.KEY_IP);
+    }
     StateMachine.getInstance()
         .registerAEDStateChangeCallback(new StateMachine.StateChangeCallback() {
           @Override public void onChange(int prevState, int currentState) {
@@ -92,7 +121,8 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
     Log.v(LOG_TAG, "++onResume");
     super.onResume();
     initOnce();
-    initPerRun(Const.SERVER_IP, Const.TOKEN_SIZE, null);
+    initPerRun(TextUtils.isEmpty(configedIP) ? Const.SERVER_IP : configedIP, Const.TOKEN_SIZE,
+        null);
   }
 
   @Override protected void onPause() {

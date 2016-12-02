@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="50px"
+    >
+  <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="Please input the server IP address below"
+      />
+  <EditText
+      android:id="@+id/config_input"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="30dp"
+      android:textColor="#333333"
+      android:textSize="24dp"
+      />
+  <Button
+      android:layout_width="100dp"
+      android:layout_height="50dp"
+      android:layout_marginTop="30dp"
+      android:text="Confirm"
+      android:id="@+id/config_confirm"
+      />
+
+</LinearLayout>

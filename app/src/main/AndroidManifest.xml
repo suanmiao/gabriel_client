@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="com.google.android.glass.permission.DEVELOPMENT" />
     
     <application
@@ -48,7 +49,9 @@
                 android:resource="@xml/gabriel_start" />
         </activity>
         <activity
-            android:name="edu.cmu.cs.gabriel.SettingsActivity">
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:name="edu.cmu.cs.gabriel.ConfigActivity">
         </activity>
     </application>
 
