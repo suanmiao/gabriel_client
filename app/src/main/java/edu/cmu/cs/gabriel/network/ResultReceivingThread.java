@@ -8,6 +8,7 @@ import android.os.Message;
 import android.util.Log;
 import com.google.gson.Gson;
 import edu.cmu.cs.gabriel.GlobalCache;
+import edu.cmu.cs.gabriel.StateMachine;
 import edu.cmu.cs.gabriel.model.FeatureDetectionModel;
 import edu.cmu.cs.gabriel.token.ReceivedPacketInfo;
 import java.io.ByteArrayInputStream;
@@ -208,9 +209,13 @@ public class ResultReceivingThread extends Thread {
           parseReceivedDataByType(recvJSON, data, NetworkProtocol.HEADER_MESSAGE_AED_STATE);
       if (aedStateData != null) {
         String aedStateString = new String(aedStateData);
+        StateMachine.StateModel model =
+            mGson.fromJson(aedStateString, StateMachine.StateModel.class);
+        model.frameId = frameID;
+
         msg = Message.obtain();
         msg.what = NetworkProtocol.NETWORK_RET_AED_STATE;
-        msg.obj = aedStateString;
+        msg.obj = model;
         //uncomment to let tts speek
         this.returnMsgHandler.sendMessage(msg);
       }

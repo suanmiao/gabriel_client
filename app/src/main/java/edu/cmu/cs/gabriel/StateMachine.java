@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 import java.util.ArrayList;
 import java.util.List;
+import org.greenrobot.eventbus.EventBus;
 
 /**
  * Created by suanmiao on 23/11/2016.
@@ -20,42 +21,70 @@ public class StateMachine {
 
   public static final int TIMEOUT_NONE = -100;
 
-  private int aed_state = -2;
-  private int timeout_state = TIMEOUT_NONE;
-  private boolean aed_found = false;
-  private boolean yellow_flash = false;
-  private boolean yellow_plug = false;
-  private boolean orange_flash = false;
+  public StateModel model;
 
-  private int token_size = 0;
+  public int token_size = 0;
 
   private Handler uiHandler;
 
+  public static class StateUpdateEvent {
+    public enum Field {
+      AED_STATE,
+      TIMEOUT_STATE,
+      FRAME_AED,
+      FRAME_YELLOW_PLUG,
+      FRAME_ORANGE_FLASH,
+      CONTINUOUS_AED,
+      CONTINUOUS_YELLOW_PLUG,
+      CONTINUOUS_ORANGE_FLASH,
+    }
+
+    public List<Field> updateField = new ArrayList<Field>();
+    public StateModel prevModel;
+    public StateModel currentModel;
+
+    public void addField(Field field) {
+      updateField.add(field);
+    }
+
+    public StateUpdateEvent(StateModel prevModel, StateModel currentModel) {
+      this.prevModel = prevModel;
+      this.currentModel = currentModel;
+    }
+  }
+
+  //'aed_state': state_machine.ret_state,
+  //'timeout_sate': state_machine.ret_timeout_state,
+  //
+  //'frame_aed': state_machine.frame_aed_exist,
+  //'frame_aed_box': state_machine.frame_aed_box.tolist(),
+  //'frame_yellow_plug': state_machine.frame_yellow_plug,
+  //'frame_yellow_plug_box': state_machine.frame_yellow_plug_box.tolist(),
+  //'frame_orange_flash': state_machine.frame_orange_flash,
+  //'frame_orange_flash_box': state_machine.frame_orange_flash_box.tolist(),
+  //
+  //'continuous_aed': state_machine.continuous_aed_exist,
+  //'continuous_yellow_plug': state_machine.continuous_yellow_plug,
+  //'continuous_orange_flash': state_machine.continuous_orange_flash,
+
   public static class StateModel {
+    public long frameId = -1;
     public int aed_state = STATE_NONE;
     public int timeout_state = TIMEOUT_NONE;
-    public boolean aed_found = false;
-    public boolean yellow_flash = false;
-    public boolean yellow_plug = false;
-    public boolean orange_flash = false;
-  }
 
-  public interface StateChangeCallback {
-    void onChange(int prevState, int currentState);
-  }
+    public boolean frame_aed = false;
+    public List<Float> frame_aed_box;
 
-  public List<StateChangeCallback> aedStateChangeCallbacks = new ArrayList<StateChangeCallback>();
-  public List<StateChangeCallback> timeoutStateChangeCallbacks =
-      new ArrayList<StateChangeCallback>();
-  public List<StateChangeCallback> aedFoundStateChangeCallbacks =
-      new ArrayList<StateChangeCallback>();
-  public List<StateChangeCallback> yellowFlashStateChangeCallbacks =
-      new ArrayList<StateChangeCallback>();
-  public List<StateChangeCallback> yellowPlugStateChangeCallbacks =
-      new ArrayList<StateChangeCallback>();
-  public List<StateChangeCallback> orangeFlashStateChangeCallbacks =
-      new ArrayList<StateChangeCallback>();
-  public List<StateChangeCallback> tokenSizeChangeCallbacks = new ArrayList<StateChangeCallback>();
+    public boolean frame_yellow_plug = false;
+    public List<Float> frame_yellow_plug_box;
+
+    public boolean frame_orange_flash = false;
+    public List<Float> frame_orange_flash_box;
+
+    public boolean continuous_aed = false;
+    public boolean continuous_yellow_plug = false;
+    public boolean continuous_orange_flash = false;
+  }
 
   public static StateMachine getInstance() {
     if (instance == null) {
@@ -66,122 +95,48 @@ public class StateMachine {
 
   public StateMachine() {
     uiHandler = new Handler(Looper.getMainLooper());
+    model = new StateModel();
+    model.aed_state = -1;
+    model.timeout_state = TIMEOUT_NONE;
   }
 
   public void updateState(StateModel model) {
-    if (aed_state != model.aed_state) {
-      int prev_value = aed_state;
-      aed_state = model.aed_state;
-      broadcastStateChange(prev_value, model.aed_state, aedStateChangeCallbacks);
+    StateUpdateEvent event = new StateUpdateEvent(this.model, model);
+    if (model.aed_state != this.model.aed_state) {
+      event.addField(StateUpdateEvent.Field.AED_STATE);
     }
-
-    if (timeout_state != model.timeout_state) {
-      int prev_value = timeout_state;
-      timeout_state = model.timeout_state;
-      broadcastStateChange(prev_value, model.timeout_state, timeoutStateChangeCallbacks);
+    if (model.timeout_state != this.model.timeout_state) {
+      event.addField(StateUpdateEvent.Field.TIMEOUT_STATE);
     }
-
-    if (aed_found != model.aed_found) {
-      boolean prev_value = orange_flash;
-      aed_found = model.aed_found;
-      broadcastStateChange(prev_value ? 1 : 0, model.aed_found ? 1 : 0,
-          aedFoundStateChangeCallbacks);
+    if (model.frame_aed != this.model.frame_aed) {
+      event.addField(StateUpdateEvent.Field.FRAME_AED);
     }
-
-    if (yellow_flash != model.yellow_flash) {
-      boolean prev_value = orange_flash;
-      yellow_flash = model.yellow_flash;
-      broadcastStateChange(prev_value ? 1 : 0, model.yellow_flash ? 1 : 0,
-          yellowFlashStateChangeCallbacks);
+    if (model.frame_orange_flash != this.model.frame_orange_flash) {
+      event.addField(StateUpdateEvent.Field.FRAME_ORANGE_FLASH);
     }
-
-    if (yellow_plug != model.yellow_plug) {
-      boolean prev_value = orange_flash;
-      yellow_plug = model.yellow_plug;
-      broadcastStateChange(prev_value ? 1 : 0, model.yellow_plug ? 1 : 0,
-          yellowPlugStateChangeCallbacks);
+    if (model.frame_yellow_plug != this.model.frame_yellow_plug) {
+      event.addField(StateUpdateEvent.Field.FRAME_YELLOW_PLUG);
     }
-
-    if (orange_flash != model.orange_flash) {
-      boolean prev_value = orange_flash;
-      orange_flash = model.orange_flash;
-      broadcastStateChange(prev_value ? 1 : 0, model.orange_flash ? 1 : 0,
-          orangeFlashStateChangeCallbacks);
+    if (model.continuous_aed != this.model.continuous_aed) {
+      event.addField(StateUpdateEvent.Field.CONTINUOUS_AED);
     }
+    if (model.continuous_orange_flash != this.model.continuous_orange_flash) {
+      event.addField(StateUpdateEvent.Field.CONTINUOUS_ORANGE_FLASH);
+    }
+    if (model.continuous_yellow_plug != this.model.continuous_yellow_plug) {
+      event.addField(StateUpdateEvent.Field.CONTINUOUS_YELLOW_PLUG);
+    }
+    if(event.updateField.size() > 0){
+      EventBus.getDefault().post(event);
+    }
+    this.model = model;
   }
 
   public void updateTokenSize(int token_size) {
     if (this.token_size != token_size) {
-      int prev_value = this.token_size;
       this.token_size = token_size;
-      broadcastStateChange(prev_value, token_size, tokenSizeChangeCallbacks);
     }
   }
 
-  public void registerAEDStateChangeCallback(StateChangeCallback callback) {
-    this.aedStateChangeCallbacks.add(callback);
-  }
 
-  public void registerTimeoutStateChangeCallback(StateChangeCallback callback) {
-    this.timeoutStateChangeCallbacks.add(callback);
-  }
-
-  public void registerAEDFoundStateChangeCallback(StateChangeCallback callback) {
-    this.aedFoundStateChangeCallbacks.add(callback);
-  }
-
-  public void registerYellowFlashStateChangeCallback(StateChangeCallback callback) {
-    this.yellowFlashStateChangeCallbacks.add(callback);
-  }
-
-  public void registerYellowPlugStateChangeCallback(StateChangeCallback callback) {
-    this.yellowPlugStateChangeCallbacks.add(callback);
-  }
-
-  public void registerOrangeFlashStateChangeCallback(StateChangeCallback callback) {
-    this.orangeFlashStateChangeCallbacks.add(callback);
-  }
-
-  public void registerTokenSizeChangeCallback(StateChangeCallback callback) {
-    this.tokenSizeChangeCallbacks.add(callback);
-  }
-
-  public void broadcastStateChange(final int prevState, final int currentState,
-      final List<StateChangeCallback> stateChangeCallbacks) {
-    uiHandler.post(new Runnable() {
-      @Override public void run() {
-        for (StateChangeCallback callback : stateChangeCallbacks) {
-          callback.onChange(prevState, currentState);
-        }
-      }
-    });
-  }
-
-  public int getAed_state() {
-    return aed_state;
-  }
-
-  public int getTimeout_state() {
-    return timeout_state;
-  }
-
-  public boolean isYellow_flash() {
-    return yellow_flash;
-  }
-
-  public boolean isAed_found() {
-    return aed_found;
-  }
-
-  public boolean isOrange_flash() {
-    return orange_flash;
-  }
-
-  public boolean isYellow_plug() {
-    return yellow_plug;
-  }
-
-  public int getToken_size() {
-    return token_size;
-  }
 }

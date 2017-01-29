@@ -2,6 +2,12 @@ package edu.cmu.cs.gabriel;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.os.Bundle;
@@ -20,6 +26,9 @@ import edu.cmu.cs.gabriel.network.VideoStreamingThread;
 import edu.cmu.cs.gabriel.token.ReceivedPacketInfo;
 import edu.cmu.cs.gabriel.token.TokenController;
 import java.io.File;
+import java.util.List;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
 public class GabrielClientActivity extends BaseVoiceCommandActivity {
 
@@ -38,7 +47,6 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
   private ListView listMain;
   private TextView textOverall;
   private TextView textDetail;
-  private StateMachine.StateChangeCallback mStateChangeCallback;
   private SListAdapter adapter;
   private int clickTime = 0;
   private long lastClickTime = 0;
@@ -68,6 +76,12 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
           clickTime++;
           if (clickTime == 5) {
             startActivity(new Intent(GabrielClientActivity.this, ConfigActivity.class));
+            if (preview != null) {
+              preview.setPreviewCallback(null);
+              preview.close();
+              preview = null;
+            }
+            terminate();
             finish();
             clickTime = 0;
           }
@@ -77,41 +91,93 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
     });
   }
 
+  @Subscribe public void onStateUpdate(StateMachine.StateUpdateEvent event) {
+    for (StateMachine.StateUpdateEvent.Field field : event.updateField) {
+      switch (field) {
+        case AED_STATE: {
+          int currentState = event.currentModel.aed_state;
+          Log.e("suan stage change ", "" + currentState);
+          speechHelper.playInstructionSound(currentState);
+          Util.bindOverallState(textOverall);
+          Util.bindStateText(adapter, currentState);
+          listMain.setSelection(adapter.getCount() - 1);
+        }
+
+        break;
+        case TIMEOUT_STATE: {
+          int currentState = event.currentModel.timeout_state;
+          Log.e("suan timeout ", "" + currentState);
+          speechHelper.playTimeoutSound(currentState);
+          Util.bindOverallState(textOverall);
+          Util.bindTimeoutText(adapter, currentState);
+          listMain.setSelection(adapter.getCount() - 1);
+        }
+        break;
+        case FRAME_AED:
+          break;
+        case FRAME_ORANGE_FLASH:
+          break;
+        case FRAME_YELLOW_PLUG:
+          break;
+      }
+    }
+    drawFeatures(event);
+    Util.bindDetailState(textDetail);
+  }
+
+  public void drawFeatures(StateMachine.StateUpdateEvent event) {
+    long frameId = event.currentModel.frameId;
+    GlobalCache.FrameHolder holder = GlobalCache.getInstance(this).getFrameById(frameId);
+    Log.e("SUAN", "aed box " + event.currentModel.frame_aed_box + " holder " + holder);
+    if (holder != null) {
+      Bitmap bitmap = BitmapFactory.decodeByteArray(holder.data, 0, holder.data.length);
+      bitmap = bitmap.copy(Bitmap.Config.RGB_565, true);
+      Paint paint = new Paint();
+      paint.setStyle(Paint.Style.STROKE);
+      Canvas canvas = new Canvas(bitmap);
+      paint.setColor(Color.RED);
+      paint.setStrokeWidth(3);
+      paint.setTextSize(30);
+
+      if (event.currentModel.frame_aed_box != null && event.currentModel.frame_aed_box.size() > 0) {
+        Rect rect = getRect(event.currentModel.frame_aed_box);
+        canvas.drawRect(rect, paint);
+        paint.setStrokeWidth(2);
+        canvas.drawText("aed", rect.centerX(), rect.centerY(), paint);
+      }
+
+      if (event.currentModel.frame_yellow_plug_box != null && event.currentModel.frame_yellow_plug_box.size() > 0) {
+        Rect rect = getRect(event.currentModel.frame_yellow_plug_box);
+        canvas.drawRect(rect, paint);
+        paint.setStrokeWidth(2);
+        canvas.drawText("YP", rect.centerX(), rect.centerY(), paint);
+      }
+
+      if (event.currentModel.frame_orange_flash_box != null && event.currentModel.frame_orange_flash_box.size() > 0) {
+        Rect rect = getRect(event.currentModel.frame_orange_flash_box);
+        canvas.drawRect(rect, paint);
+        paint.setStrokeWidth(2);
+        canvas.drawText("OF", rect.centerX(), rect.centerY(), paint);
+      }
+
+      canvas.save();
+      listMain.setBackground(new BitmapDrawable(getResources(), bitmap));
+    }
+  }
+
+  public Rect getRect(List<Float> area) {
+    float left = area.get(0);
+    float top = area.get(1);
+    float right = area.get(2);
+    float bottom = area.get(3);
+    return new Rect((int) left, (int) top, (int) right, (int) bottom);
+  }
+
   public void initData() {
     Intent intent = getIntent();
     if (intent != null && !TextUtils.isEmpty(intent.getStringExtra(ConfigActivity.KEY_IP))) {
       configedIP = intent.getStringExtra(ConfigActivity.KEY_IP);
     }
-    StateMachine.getInstance()
-        .registerAEDStateChangeCallback(new StateMachine.StateChangeCallback() {
-          @Override public void onChange(int prevState, int currentState) {
-            Log.e("suan stage change ", "" + currentState);
-            speechHelper.playInstructionSound(currentState);
-            Util.bindOverallState(textOverall);
-            Util.bindStateText(adapter, currentState);
-            listMain.setSelection(adapter.getCount() - 1);
-          }
-        });
-    StateMachine.getInstance()
-        .registerTimeoutStateChangeCallback(new StateMachine.StateChangeCallback() {
-          @Override public void onChange(int prevState, int currentState) {
-            Log.e("suan timeout ", "" + currentState);
-            speechHelper.playTimeoutSound(currentState);
-            Util.bindOverallState(textOverall);
-            Util.bindTimeoutText(adapter, currentState);
-            listMain.setSelection(adapter.getCount() - 1);
-          }
-        });
-    mStateChangeCallback = new StateMachine.StateChangeCallback() {
-      @Override public void onChange(int prevState, int currentState) {
-        Util.bindDetailState(textDetail);
-      }
-    };
-    StateMachine.getInstance().registerAEDFoundStateChangeCallback(mStateChangeCallback);
-    StateMachine.getInstance().registerYellowFlashStateChangeCallback(mStateChangeCallback);
-    StateMachine.getInstance().registerYellowPlugStateChangeCallback(mStateChangeCallback);
-    StateMachine.getInstance().registerOrangeFlashStateChangeCallback(mStateChangeCallback);
-    StateMachine.getInstance().registerTokenSizeChangeCallback(mStateChangeCallback);
 
     Util.bindOverallState(textOverall);
     Util.bindDetailState(textDetail);
@@ -120,6 +186,7 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
   @Override protected void onResume() {
     Log.v(LOG_TAG, "++onResume");
     super.onResume();
+    EventBus.getDefault().register(this);
     initOnce();
     initPerRun(TextUtils.isEmpty(configedIP) ? Const.SERVER_IP : configedIP, Const.TOKEN_SIZE,
         null);
@@ -127,6 +194,7 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
 
   @Override protected void onPause() {
     Log.v(LOG_TAG, "++onPause");
+    EventBus.getDefault().unregister(this);
     this.terminate();
     super.onPause();
   }
@@ -134,6 +202,11 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
   @Override protected void onDestroy() {
     Log.v(LOG_TAG, "++onDestroy");
     super.onDestroy();
+    if (preview != null) {
+      preview.setPreviewCallback(null);
+      preview.close();
+      preview = null;
+    }
   }
 
   /**
@@ -213,9 +286,9 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
    */
   private Handler returnMsgHandler = new Handler() {
     public void handleMessage(Message msg) {
-      if (msg.what == NetworkProtocol.NETWORK_RET_FAILED) {
-        terminate();
-      }
+      //if (msg.what == NetworkProtocol.NETWORK_RET_FAILED) {
+      //  terminate();
+      //}
       if (msg.what == NetworkProtocol.NETWORK_RET_MESSAGE) {
         receivedPacketInfo = (ReceivedPacketInfo) msg.obj;
         receivedPacketInfo.setMsgRecvTime(System.currentTimeMillis());
@@ -229,14 +302,8 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
         Bitmap feedbackImg = (Bitmap) msg.obj;
       }
       if (msg.what == NetworkProtocol.NETWORK_RET_AED_STATE) {
-        String stageString = (String) msg.obj;
-        try {
-          StateMachine.StateModel model =
-              mGson.fromJson(stageString, StateMachine.StateModel.class);
-          StateMachine.getInstance().updateState(model);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
+        StateMachine.StateModel model = (StateMachine.StateModel) msg.obj;
+        StateMachine.getInstance().updateState(model);
       }
       //if (msg.what == NetworkProtocol.NETWORK_RET_DETECTION) {
       //  ResultReceivingThread.DetectionHolder holder =
@@ -289,11 +356,5 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
     }
 
     speechHelper.stop();
-
-    if (preview != null) {
-      preview.setPreviewCallback(null);
-      preview.close();
-      preview = null;
-    }
   }
 }

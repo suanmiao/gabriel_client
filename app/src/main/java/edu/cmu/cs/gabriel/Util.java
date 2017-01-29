@@ -10,18 +10,20 @@ public class Util {
   public enum AED_STATE {
     STATE_NONE("Cognitive assistant begin. Now please look at AED directly.",
         "State 0 time out, please make sure you are looking at AED", "INITIALIZED"),
-    STATE_AED_FOUND("Please turn on AED.", "State 1 timeout, please make sure the AED is turned on", "AED FOUND"),
-    STATE_AED_ON("Nice! Now apply pad and plug in", "State 2 timeout, please make sure the yellow connector is plugged in", "AED ON"),
+    STATE_AED_FOUND("Please turn on AED.", "State 1 timeout, please make sure the AED is turned on",
+        "AED FOUND"),
+    STATE_AED_ON("Nice! Now apply pad and plug in",
+        "State 2 timeout, please make sure the yellow connector is plugged in", "AED ON"),
     STATE_AED_PLUGIN("Congratulations, now wait for further instructions",
         "State 2 timeout, please make sure the patient is shockable", "YELLOW PLUGGED"),
-    STATE_AED_SHOCK("Press orange button to deliver shock", "State 3 timeout, please make sure you have delivered the shock",
-        "SHOCKING"),
+    STATE_AED_SHOCK("Press orange button to deliver shock",
+        "State 3 timeout, please make sure you have delivered the shock", "SHOCKING"),
     STATE_AED_FINISH("The instruction finishes", "State 4 timeout, it's fine", "FINISH");
     private String state_text;
     private String timeout_text;
     private String display_text;
 
-    private AED_STATE(String state_text, String timeout_text, String display_text) {
+    AED_STATE(String state_text, String timeout_text, String display_text) {
       this.state_text = state_text;
       this.timeout_text = timeout_text;
       this.display_text = display_text;
@@ -69,10 +71,10 @@ public class Util {
 
   public static void bindOverallState(TextView textOverall) {
     StateMachine machine = StateMachine.getInstance();
-    String aedState = getAEDState(machine.getAed_state()).getDisplay_text();
+    String aedState = getAEDState(machine.model.aed_state).getDisplay_text();
     String timeoutState = "";
-    if (machine.getTimeout_state() != StateMachine.TIMEOUT_NONE) {
-      timeoutState = getAEDState(machine.getTimeout_state()).getDisplay_text();
+    if (machine.model.timeout_state != StateMachine.TIMEOUT_NONE) {
+      timeoutState = getAEDState(machine.model.timeout_state).getDisplay_text();
     }
     String text = aedState + "\n" + timeoutState;
     textOverall.setText(text);
@@ -81,11 +83,12 @@ public class Util {
   public static void bindDetailState(TextView textDetail) {
     StateMachine machine = StateMachine.getInstance();
     String text = "";
-    text += (generateText("AED", machine.isAed_found()) + "\n");
-    text += (generateText("Plug", machine.isYellow_plug()) + "\n");
-    text += (generateText("Y Flash", machine.isYellow_flash()) + "\n");
-    text += (generateText("O Flash", machine.isOrange_flash()) + "\n");
-    text += ("token size: " + machine.getToken_size() + "\n");
+    text += (generateText("AED", machine.model.continuous_aed) + "\n");
+    text += (generateText("Plug", machine.model.continuous_yellow_plug) + "\n");
+    text += (generateText("Y Flash", false) + "\n");
+    text += (generateText("O Flash", machine.model.continuous_orange_flash) + "\n");
+    text += ("token size: " + machine.token_size + "\n");
+    text += (generateText("In Frame", machine.model.frame_aed) + "\n");
     textDetail.setText(text);
   }
 
