@@ -26,4 +26,8 @@ public class NetworkProtocol {
     public static final String HEADER_MESSAGE_SPEECH = "speech";
     public static final String HEADER_MESSAGE_DETECTION = "detection";
     public static final String HEADER_MESSAGE_AED_STATE = "aed_state";
+    public static final String HEADER_MESSAGE_USER_RESP = "user_response";
+
+    public static int USER_RESPONSE = -1;
+
 }

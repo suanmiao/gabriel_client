@@ -32,7 +32,9 @@ public class Const {
 
   /************************ Demo mode only *************************************/
   // server IP
-  public static final String SERVER_IP = "128.2.211.75";  // Cloudlet
+   public static final String SERVER_IP = "128.2.211.75";  // Cloudlet
+// public static final String SERVER_IP = "128.2.209.246";  // Cloudlet
+
   //public static final String SERVER_IP = "128.237.187.96";  // Local
 
   // token size

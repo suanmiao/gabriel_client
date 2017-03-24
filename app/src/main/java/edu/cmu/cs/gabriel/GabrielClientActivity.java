@@ -188,13 +188,13 @@ public class GabrielClientActivity extends BaseVoiceCommandActivity {
     super.onResume();
     EventBus.getDefault().register(this);
     initOnce();
-    initPerRun(TextUtils.isEmpty(configedIP) ? Const.SERVER_IP : configedIP, Const.TOKEN_SIZE,
-        null);
+    initPerRun(Const.SERVER_IP, Const.TOKEN_SIZE, null);
+//    initPerRun(TextUtils.isEmpty(configedIP) ? Const.SERVER_IP : configedIP, Const.TOKEN_SIZE,
+//        null);
   }
 
   @Override protected void onPause() {
-    Log.v(LOG_TAG, "++onPause");
-    EventBus.getDefault().unregister(this);
+     EventBus.getDefault().unregister(this);
     this.terminate();
     super.onPause();
   }

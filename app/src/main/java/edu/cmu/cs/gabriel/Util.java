@@ -54,15 +54,15 @@ public class Util {
 
   public static AED_STATE getAEDState(int state) {
     switch (state) {
-      case StateMachine.STATE_AED_FOUND:
+      case StateMachine.AED_FOUND:
         return AED_STATE.STATE_AED_FOUND;
-      case StateMachine.STATE_AED_ON:
+      case StateMachine.AED_ON:
         return AED_STATE.STATE_AED_ON;
-      case StateMachine.STATE_AED_PLUGIN:
+      case StateMachine.AED_PLUGIN:
         return AED_STATE.STATE_AED_PLUGIN;
-      case StateMachine.STATE_AED_SHOCK:
+      case StateMachine.AED_SHOCK:
         return AED_STATE.STATE_AED_SHOCK;
-      case StateMachine.STATE_AED_FINISH:
+      case StateMachine.AED_FINISH:
         return AED_STATE.STATE_AED_FINISH;
       default:
         return AED_STATE.STATE_NONE;
@@ -83,12 +83,12 @@ public class Util {
   public static void bindDetailState(TextView textDetail) {
     StateMachine machine = StateMachine.getInstance();
     String text = "";
-    text += (generateText("AED", machine.model.continuous_aed) + "\n");
-    text += (generateText("Plug", machine.model.continuous_yellow_plug) + "\n");
-    text += (generateText("Y Flash", false) + "\n");
-    text += (generateText("O Flash", machine.model.continuous_orange_flash) + "\n");
-    text += ("token size: " + machine.token_size + "\n");
-    text += (generateText("In Frame", machine.model.frame_aed) + "\n");
+//    text += (generateText("AED", machine.model.continuous_aed) + "\n");
+//    text += (generateText("Plug", machine.model.continuous_yellow_plug) + "\n");
+//    text += (generateText("Y Flash", false) + "\n");
+//    text += (generateText("O Flash", machine.model.continuous_orange_flash) + "\n");
+//    text += ("token size: " + machine.token_size + "\n");
+//    text += (generateText("In Frame", machine.model.frame_aed) + "\n");
     textDetail.setText(text);
   }
 

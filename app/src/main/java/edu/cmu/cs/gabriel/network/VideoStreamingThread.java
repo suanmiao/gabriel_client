@@ -122,11 +122,17 @@ public class VideoStreamingThread extends Thread {
         // make it as a single packet
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
+//        byte[] header = ("{\""
+//            + NetworkProtocol.HEADER_MESSAGE_FRAME_ID
+//            + "\":"
+//            + sendingFrameID
+//            + "}").getBytes();
         byte[] header = ("{\""
             + NetworkProtocol.HEADER_MESSAGE_FRAME_ID
             + "\":"
             + sendingFrameID
-            + "}").getBytes();
+            + ","+"\""+NetworkProtocol.HEADER_MESSAGE_USER_RESP+"\""+":"+NetworkProtocol.USER_RESPONSE+
+                "}").getBytes();
         dos.writeInt(header.length);
         dos.write(header);
         dos.writeInt(data.length);

@@ -9,11 +9,11 @@ import android.util.Log;
 import java.util.HashMap;
 import java.util.Locale;
 
-import static edu.cmu.cs.gabriel.StateMachine.STATE_AED_FOUND;
-import static edu.cmu.cs.gabriel.StateMachine.STATE_AED_ON;
-import static edu.cmu.cs.gabriel.StateMachine.STATE_AED_PLUGIN;
-import static edu.cmu.cs.gabriel.StateMachine.STATE_AED_SHOCK;
-import static edu.cmu.cs.gabriel.StateMachine.STATE_NONE;
+import static edu.cmu.cs.gabriel.StateMachine.AED_FOUND;
+import static edu.cmu.cs.gabriel.StateMachine.AED_ON;
+import static edu.cmu.cs.gabriel.StateMachine.AED_PLUGIN;
+import static edu.cmu.cs.gabriel.StateMachine.AED_SHOCK;
+import static edu.cmu.cs.gabriel.StateMachine.AED_NONE;
 
 /**
  * Created by suanmiao on 23/11/2016.
@@ -33,17 +33,17 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     this.context = context;
     //tts = new TextToSpeech(context, this);
     this.player = new MediaPlayer();
-    stageInstructionMap.put(STATE_NONE, "01_look_at.wav");
-    stageInstructionMap.put(STATE_AED_FOUND, "02_turn_on.wav");
-    stageInstructionMap.put(STATE_AED_ON, "03_apply_pad.wav");
-    stageInstructionMap.put(STATE_AED_PLUGIN, "04_wait_further.wav");
-    stageInstructionMap.put(STATE_AED_SHOCK, "05_press_shock.wav");
+    stageInstructionMap.put(AED_NONE, "01_look_at.wav");
+    stageInstructionMap.put(AED_FOUND, "02_turn_on.wav");
+    stageInstructionMap.put(AED_ON, "03_apply_pad.wav");
+    stageInstructionMap.put(AED_PLUGIN, "04_wait_further.wav");
+    stageInstructionMap.put(AED_SHOCK, "05_press_shock.wav");
 
-    timeoutInstructionMap.put(STATE_NONE, "06_no_aed.wav");
-    timeoutInstructionMap.put(STATE_AED_FOUND, "7.wav");
-    timeoutInstructionMap.put(STATE_AED_ON, "07_no_plug.wav");
-    timeoutInstructionMap.put(STATE_AED_PLUGIN, "08_no_shock.wav");
-    timeoutInstructionMap.put(STATE_AED_SHOCK, "10.wav");
+    timeoutInstructionMap.put(AED_NONE, "06_no_aed.wav");
+    timeoutInstructionMap.put(AED_FOUND, "7.wav");
+    timeoutInstructionMap.put(AED_ON, "07_no_plug.wav");
+    timeoutInstructionMap.put(AED_PLUGIN, "08_no_shock.wav");
+    timeoutInstructionMap.put(AED_SHOCK, "10.wav");
   }
 
   public void playInstructionSound(int stage) {

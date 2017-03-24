@@ -3,6 +3,9 @@ package edu.cmu.cs.gabriel.network;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -12,6 +15,7 @@ import edu.cmu.cs.gabriel.StateMachine;
 import edu.cmu.cs.gabriel.model.FeatureDetectionModel;
 import edu.cmu.cs.gabriel.token.ReceivedPacketInfo;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -159,12 +163,18 @@ public class ResultReceivingThread extends Thread {
 
       byte[] data = receiveNBytes(networkReader, dataSize);
       // image guidance
-      byte[] imageData =
-          parseReceivedDataByType(recvJSON, data, NetworkProtocol.HEADER_MESSAGE_IMAGE);
+      byte[] imageData = parseReceivedDataByType(recvJSON, data, NetworkProtocol.HEADER_MESSAGE_IMAGE);
       if (imageData != null) {
+        Log.e("imageData","received "+imageData.length);
         imageFeedback = BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
+//        ByteArrayOutputStream outstr = new ByteArrayOutputStream();
+//        Rect rect = new Rect(0, 0, 120, 120);
+//        YuvImage yuvimage=new YuvImage(imageData, ImageFormat.NV21,120,120,null);
+//        yuvimage.compressToJpeg(rect, 100, outstr);
+//        Bitmap bmp = BitmapFactory.decodeByteArray(outstr.toByteArray(), 0, outstr.size());
         msg = Message.obtain();
         msg.what = NetworkProtocol.NETWORK_RET_IMAGE;
+//        msg.obj = bmp;
         msg.obj = imageFeedback;
         this.returnMsgHandler.sendMessage(msg);
       }
@@ -209,6 +219,7 @@ public class ResultReceivingThread extends Thread {
           parseReceivedDataByType(recvJSON, data, NetworkProtocol.HEADER_MESSAGE_AED_STATE);
       if (aedStateData != null) {
         String aedStateString = new String(aedStateData);
+        //Log.e("REC aedStateString",aedStateString);
         StateMachine.StateModel model =
             mGson.fromJson(aedStateString, StateMachine.StateModel.class);
         model.frameId = frameID;
