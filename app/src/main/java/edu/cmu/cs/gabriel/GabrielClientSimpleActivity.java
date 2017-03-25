@@ -114,15 +114,18 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         mYes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                int leave = yesCounter % 4;
+                int leave = yesCounter % 5;
                 if (leave == 0){
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_START_DETECTION;
+                }else if (leave == 1){
+                    //confirm the user's age is same as system's judgement
                     NetworkProtocol.USER_RESPONSE = StateMachine.RESP_AGE_DETECT_YES;
-                } else if (leave == 1) {
-                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_YES;
                 } else if (leave == 2) {
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_LEFT;
+                } else if (leave == 3) {
                     NetworkProtocol.USER_RESPONSE = StateMachine.RESP_LEFT_PAD_FINISHED;
-                }else if(leave == 3){
-                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_RIGHT_PAD_FINISHED;
+                } else if (leave == 4){
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PAD_APPLYING_FINISHED;
                 }
                 Toast.makeText(getApplicationContext(),StateMachine.getRespStrByNum(NetworkProtocol.USER_RESPONSE),
                         Toast.LENGTH_SHORT).show();
@@ -132,8 +135,14 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         mNo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                int leave = noCounter % 4;
-                NetworkProtocol.USER_RESPONSE = StateMachine.RESP_AGE_DETECT_NO;
+                int leave = noCounter % 3;
+                if(leave == 0){
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_AGE_DETECT_NO;
+                }else if(leave == 1){
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_RIGHT;
+                }else if(leave == 2){
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_RIGHT_PAD_FINISHED;
+                }
                 Toast.makeText(getApplicationContext(),StateMachine.getRespStrByNum(NetworkProtocol.USER_RESPONSE),
                         Toast.LENGTH_SHORT).show();
                 noCounter++;
@@ -167,10 +176,10 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     isAEDFind = model.frame_aed;
                 case FRAME_ORANGE_BTN:
                     isOrangeButtonFind = model.frame_orange_btn;
-                case FRAME_ORANGE_FLASH:
-                    isOrangeButtonFind = model.frame_orange_flash;
                 case FRAME_YELLOW_PLUG:
                     isPlugFind = model.frame_yellow_plug;
+                case FRAME_ORANGE_FLASH:
+                    isOrangeFlashFind = model.frame_orange_flash;
                 case FRAME_JOINTS:
                     isJointsFind = model.frame_joints;
                 case PAD_Adult:

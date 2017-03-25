@@ -22,6 +22,7 @@ public class StateMachine {
   public static final int AED_PLUGIN = 2;
   public static final int AED_SHOCK = 3;
   public static final int AED_FINISH = 4;
+
   public static final int PAD_NONE = -11;
   public static final int PAD_DETECT_AGE = -10;
   public static final int PAD_AGE_CONFIRM = -9;
@@ -35,10 +36,12 @@ public class StateMachine {
 
   public static final int RESP_AGE_DETECT_YES = 1;
   public static final int RESP_AGE_DETECT_NO = 2;
-  public static final int RESP_PEEL_PAD_YES = 3;
+  public static final int RESP_PEEL_PAD_LEFT = 3;
+  public static final int RESP_PEEL_PAD_RIGHT = 7;
   public static final int RESP_LEFT_PAD_FINISHED = 4;
   public static final int RESP_RIGHT_PAD_FINISHED = 5;
-
+  public static final int RESP_PAD_APPLYING_FINISHED = 8;
+  public static final int RESP_START_DETECTION = 6;
 
   public static final int TIMEOUT_NONE = -100;
 
@@ -109,14 +112,23 @@ public class StateMachine {
         case RESP_AGE_DETECT_NO:
           str = "RESP_AGE_DETECT_NO";
           break;
-        case RESP_PEEL_PAD_YES:
-          str = "RESP_PEEL_PAD_YES";
+        case RESP_PEEL_PAD_LEFT:
+          str = "RESP_PEEL_PAD_LEFT";
+          break;
+        case RESP_PEEL_PAD_RIGHT:
+          str = "RESP_PEEL_PAD_RIGHT";
           break;
         case RESP_LEFT_PAD_FINISHED:
           str = "RESP_LEFT_PAD_FINISHED";
           break;
         case RESP_RIGHT_PAD_FINISHED:
           str = "RESP_RIGHT_PAD_FINISHED";
+          break;
+        case RESP_PAD_APPLYING_FINISHED:
+          str = "RESP_PAD_APPLYING_FINISHED";
+          break;
+        case RESP_START_DETECTION:
+          str = "RESP_START_DETECTION";
           break;
         case -1:
           str = "default value";
