@@ -91,7 +91,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         initHiddenInfoPanel();
         mWindow = (ImageView)findViewById(R.id.camera_window);
-        yesCounter = 0;
+        yesCounter = -1; // Was originally initialized to 0; -1 so start point is known
         noCounter = 0;
         initWidget();
     }
@@ -114,19 +114,44 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         mYes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                int leave = yesCounter % 5;
-                if (leave == 0){
-                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_START_DETECTION;
+                int stage;
+                if (yesCounter < 0) {
+                    // yesCounter is only negative after initialization
                     speechHelper.playInitialStages();
-                }else if (leave == 1){
+                    yesCounter++;
+                    return;
+                }
+                int leave = yesCounter % 7;
+                if (leave == 0){
+                    stage = StateMachine.RESP_START_DETECTION;
+                    NetworkProtocol.USER_RESPONSE = stage;
+                    speechHelper.playInstructionSound(stage);
+                } else if (leave == 1){
                     //confirm the user's age is same as system's judgement
-                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_AGE_DETECT_YES;
-                } else if (leave == 2) {
-                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_LEFT;
+                    stage = StateMachine.RESP_AGE_DETECT_YES;
+                    NetworkProtocol.USER_RESPONSE = stage;
+                    speechHelper.playInstructionSound(stage);
+                } else if (leave == 2){
+                    speechHelper.updateMapDefib(true);
+                    stage = StateMachine.RESP_DEFIB_YES;
+                    NetworkProtocol.USER_RESPONSE = stage;
+                    speechHelper.playInstructionSound(stage);
                 } else if (leave == 3) {
-                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_LEFT_PAD_FINISHED;
-                } else if (leave == 4){
-                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PAD_APPLYING_FINISHED;
+                    stage = StateMachine.RESP_PEEL_PAD_LEFT;
+                    NetworkProtocol.USER_RESPONSE = stage;
+                    speechHelper.playInstructionSound(stage);
+                } else if (leave == 4) {
+                    stage = StateMachine.RESP_LEFT_PAD_FINISHED;
+                    NetworkProtocol.USER_RESPONSE = stage;
+                    speechHelper.playInstructionSound(stage);
+                } else if (leave == 5) {
+                    stage = StateMachine.RESP_PEEL_PAD_RIGHT;
+                    NetworkProtocol.USER_RESPONSE = stage;
+                    speechHelper.playInstructionSound(stage);
+                } else if (leave == 6){
+                    stage = StateMachine.RESP_PAD_APPLYING_FINISHED;
+                    NetworkProtocol.USER_RESPONSE = stage;
+                    speechHelper.playInstructionSound(stage);
                 }
                 Toast.makeText(getApplicationContext(),StateMachine.getRespStrByNum(NetworkProtocol.USER_RESPONSE),
                         Toast.LENGTH_SHORT).show();
@@ -136,12 +161,18 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         mNo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                int leave = noCounter % 3;
+                int leave = noCounter % 4;
+                int stage;
                 if(leave == 0){
                     NetworkProtocol.USER_RESPONSE = StateMachine.RESP_AGE_DETECT_NO;
-                }else if(leave == 1){
-                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_RIGHT;
+                }else if (leave == 1) {
+                    speechHelper.updateMapDefib(false);
+                    stage = StateMachine.RESP_DEFIB_NO;
+                    NetworkProtocol.USER_RESPONSE = stage;
+                    speechHelper.playInstructionSound(stage);
                 }else if(leave == 2){
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_RIGHT;
+                }else if(leave == 3){
                     NetworkProtocol.USER_RESPONSE = StateMachine.RESP_RIGHT_PAD_FINISHED;
                 }
                 Toast.makeText(getApplicationContext(),StateMachine.getRespStrByNum(NetworkProtocol.USER_RESPONSE),
@@ -162,6 +193,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
 
         for (StateMachine.StateUpdateEvent.Field field : event.updateField) {
             StateMachine.StateModel model = event.currentModel;
+            String modelResp;
             switch (field) {
                 case AED_STATE: {
                     int currentState = model.aed_state;
@@ -186,14 +218,54 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 case PAD_Adult:
                     mHiddenAdultPAD.setText(String.valueOf(model.pad_adult));
                 case PAD_WRONG_PAD:
-                    mHiddenWrongPad.setText(String.valueOf(model.pad_wrong_pad));
+                    modelResp = String.valueOf(model.pad_wrong_pad);
+                    mHiddenWrongPad.setText(modelResp);
+                    // TO DO: Update with actual modelResp values
+                    if (modelResp == "true") {
+                        speechHelper.playInstructionSound(field);
+                    } else {
+                        speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_CORR_PAD);
+                    }
                 case PAD_DETECT:
                     String tmp = model.pad_detect[0] + " "+model.pad_detect[1];
                     mHiddenPadDetect.setText(tmp);
+                    // TO DO: Update resp with actual values
+                    int resp = model.pad_detect[1];
+                    if (resp == 1) {
+                        // There was a detection error
+                        // TO DO: check if this is the actual AED state to differentiate step 11 from 14
+                        if (model.aed_state == StateMachine.PAD_LEFT_PAD_SHOW) {
+                            speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_DETECT);
+                        } else {
+                            speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_DETECT_RIGHT);
+                        }
+                    } else {
+                        if (model.aed_state == StateMachine.PAD_LEFT_PAD_SHOW) {
+                            speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_CORR_DETECT);
+                        } else {
+                            speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_CORR_DETECT_RIGHT);
+                        }
+                    }
                 case PAD_WRONG_LEFT:
-                    mHiddenWrongLeftPad.setText(String.valueOf(model.pad_wrong_left));
-                case PAITIENT_IS_ADULT:
-                    mHiddenPatientAdult.setText(String.valueOf(model.patient_is_adult));
+                    modelResp = String.valueOf(model.pad_wrong_left);
+                    mHiddenWrongLeftPad.setText(modelResp);
+                    // TO DO: Update with actual modelResp values
+                    if (modelResp == "true") {
+                        speechHelper.playInstructionSound(field);
+                    } else {
+                        speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_CORR_LEFT);
+                    }
+                case PATIENT_IS_ADULT:
+                    modelResp = String.valueOf(model.patient_is_adult);
+                    mHiddenPatientAdult.setText(modelResp);
+                    // TO DO: Update with actual modelResp values
+                    if (modelResp == "true") {
+                        speechHelper.updateMapAdult(true);
+                        speechHelper.playInstructionSound(field);
+                    } else {
+                        speechHelper.updateMapAdult(false);
+                        speechHelper.playInstructionSound(field);
+                    }
             }
         }
         mAEDBoxState.setText(String.valueOf(isAEDFind)+"/"+String.valueOf(isOrangeButtonFind)+"/"

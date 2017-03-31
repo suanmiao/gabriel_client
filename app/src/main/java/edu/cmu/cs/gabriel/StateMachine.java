@@ -34,21 +34,16 @@ public class StateMachine {
   public static final int PAD_WAIT_RIGHT_PAD = -3;
   public static final int PAD_RIGHT_PAD = -2;
 
-  //Prep stages are for the period before
-  public static final int PREP_A = 50;
-  public static final int PREP_B = 51;
-  public static final int PREP_C = 52;
-  public static final int PREP_D = 53;
-  public static final int PREP_E = 54;
-
-  public static final int RESP_AGE_DETECT_YES = 1;
-  public static final int RESP_AGE_DETECT_NO = 2;
-  public static final int RESP_PEEL_PAD_LEFT = 3;
-  public static final int RESP_PEEL_PAD_RIGHT = 7;
-  public static final int RESP_LEFT_PAD_FINISHED = 4;
-  public static final int RESP_RIGHT_PAD_FINISHED = 5;
-  public static final int RESP_PAD_APPLYING_FINISHED = 8;
-  public static final int RESP_START_DETECTION = 6;
+  public static final int RESP_AGE_DETECT_YES = 11;
+  public static final int RESP_AGE_DETECT_NO = 12;
+  public static final int RESP_PEEL_PAD_LEFT = 13;
+  public static final int RESP_PEEL_PAD_RIGHT = 17;
+  public static final int RESP_LEFT_PAD_FINISHED = 14;
+  public static final int RESP_RIGHT_PAD_FINISHED = 15;
+  public static final int RESP_PAD_APPLYING_FINISHED = 18;
+  public static final int RESP_START_DETECTION = 16;
+  public static final int RESP_DEFIB_YES = 19;
+  public static final int RESP_DEFIB_NO = 20;
 
   public static final int TIMEOUT_NONE = -100;
 
@@ -137,6 +132,12 @@ public class StateMachine {
         case RESP_START_DETECTION:
           str = "RESP_START_DETECTION";
           break;
+        case RESP_DEFIB_YES:
+          str = "RESP_DEFIB_YES";
+          break;
+        case RESP_DEFIB_NO:
+          str = "RESP_DEFIB_NO";
+          break;
         case -1:
           str = "default value";
     }
@@ -158,7 +159,12 @@ public class StateMachine {
       PAD_WRONG_PAD,
       PAD_WRONG_LEFT,
       PAD_DETECT,
-      PAITIENT_IS_ADULT
+      PATIENT_IS_ADULT,
+      PAD_CORR_PAD,
+      PAD_CORR_LEFT,
+      PAD_CORR_DETECT,
+      PAD_DETECT_RIGHT,
+      PAD_CORR_DETECT_RIGHT
     }
 
     public List<Field> updateField = new ArrayList<Field>();
@@ -253,14 +259,18 @@ public class StateMachine {
       event.addField(StateUpdateEvent.Field.PAD_DETECT);
       event.addField(StateUpdateEvent.Field.PAD_WRONG_LEFT);
       event.addField(StateUpdateEvent.Field.PAD_WRONG_PAD);
-      event.addField(StateUpdateEvent.Field.PAITIENT_IS_ADULT);
+      event.addField(StateUpdateEvent.Field.PATIENT_IS_ADULT);
+      event.addField(StateUpdateEvent.Field.PAD_CORR_LEFT);
+      event.addField(StateUpdateEvent.Field.PAD_CORR_PAD);
+      event.addField(StateUpdateEvent.Field.PAD_CORR_DETECT);
+      event.addField(StateUpdateEvent.Field.PAD_DETECT_RIGHT);
+      event.addField(StateUpdateEvent.Field.PAD_CORR_DETECT_RIGHT);
 
       event.addField(StateUpdateEvent.Field.FRAME_AED);
       event.addField(StateUpdateEvent.Field.FRAME_ORANGE_BTN);
       event.addField(StateUpdateEvent.Field.FRAME_ORANGE_FLASH);
       event.addField(StateUpdateEvent.Field.FRAME_YELLOW_PLUG);
       event.addField(StateUpdateEvent.Field.FRAME_JOINTS);
-
 
     if(event.updateField.size() > 0){
       EventBus.getDefault().post(event);
