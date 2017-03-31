@@ -6,15 +6,22 @@ import android.media.MediaPlayer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
+
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 import static edu.cmu.cs.gabriel.StateMachine.AED_FOUND;
+import static edu.cmu.cs.gabriel.StateMachine.AED_NONE;
 import static edu.cmu.cs.gabriel.StateMachine.AED_ON;
 import static edu.cmu.cs.gabriel.StateMachine.AED_PLUGIN;
 import static edu.cmu.cs.gabriel.StateMachine.AED_SHOCK;
-import static edu.cmu.cs.gabriel.StateMachine.AED_NONE;
-
+import static edu.cmu.cs.gabriel.StateMachine.PREP_A;
+import static edu.cmu.cs.gabriel.StateMachine.PREP_B;
+import static edu.cmu.cs.gabriel.StateMachine.PREP_C;
+import static edu.cmu.cs.gabriel.StateMachine.PREP_D;
+import static edu.cmu.cs.gabriel.StateMachine.PREP_E;
 /**
  * Created by suanmiao on 23/11/2016.
  */
@@ -29,21 +36,56 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
   public HashMap<Integer, String> stageInstructionMap = new HashMap<Integer, String>();
   public HashMap<Integer, String> timeoutInstructionMap = new HashMap<Integer, String>();
 
+  private List<String> initialFiles = Arrays.asList("instr_1.m4a","instr_2.m4a",
+          "instr_3.m4a","instr_4.m4a","instr_5.m4a");
+  private int initialCounter = 0;
+  private int initialStages = initialFiles.size();
+
+  private MediaPlayer initialPlayer;
+
   public SpeechHelper(Context context) {
     this.context = context;
     //tts = new TextToSpeech(context, this);
     this.player = new MediaPlayer();
+
     stageInstructionMap.put(AED_NONE, "01_look_at.wav");
     stageInstructionMap.put(AED_FOUND, "02_turn_on.wav");
     stageInstructionMap.put(AED_ON, "03_apply_pad.wav");
     stageInstructionMap.put(AED_PLUGIN, "04_wait_further.wav");
     stageInstructionMap.put(AED_SHOCK, "05_press_shock.wav");
 
+    //Preprocessing patient stage
+    stageInstructionMap.put(PREP_A, "instr_1.m4a");
+    stageInstructionMap.put(PREP_B, "instr_2.m4a");
+    stageInstructionMap.put(PREP_C, "instr_3.m4a");
+    stageInstructionMap.put(PREP_D, "instr_4.m4a");
+    stageInstructionMap.put(PREP_E, "instr_5a.m4a");
+
     timeoutInstructionMap.put(AED_NONE, "06_no_aed.wav");
     timeoutInstructionMap.put(AED_FOUND, "7.wav");
     timeoutInstructionMap.put(AED_ON, "07_no_plug.wav");
     timeoutInstructionMap.put(AED_PLUGIN, "08_no_shock.wav");
     timeoutInstructionMap.put(AED_SHOCK, "10.wav");
+
+    try {
+      this.initialPlayer = new MediaPlayer();
+
+      AssetFileDescriptor descriptor = context.getAssets().openFd("instr_1.m4a");
+      initialPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
+              descriptor.getLength());
+      descriptor.close();
+
+      initialPlayer.prepare();
+      initialPlayer.setVolume(1f, 1f);
+      initialPlayer.setLooping(false);
+      initialPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+        public void onCompletion(MediaPlayer mp) {
+          playInitialStages();
+        }
+      });
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   public void playInstructionSound(int stage) {
@@ -62,6 +104,46 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     playSound(assetPath);
   }
 
+  public void playInitialStages() {
+    if (initialCounter == 0) {
+      initialPlayer.start();
+      initialCounter++;
+    } else if (initialCounter < initialStages) {
+      String assetPath = initialFiles.get(initialCounter);
+      initialCounter++;
+
+      try {
+        if (initialPlayer != null) {
+          if (initialPlayer.isPlaying()) {
+            initialPlayer.stop();
+          }
+          initialPlayer.reset();
+          initialPlayer = new MediaPlayer();
+        }
+
+        AssetFileDescriptor descriptor = context.getAssets().openFd(assetPath);
+        initialPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
+                descriptor.getLength());
+        descriptor.close();
+
+        initialPlayer.prepare();
+        initialPlayer.setVolume(1f, 1f);
+        initialPlayer.setLooping(false);
+        initialPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+          public void onCompletion(MediaPlayer mp) {
+            playInitialStages();
+          }
+        });
+        initialPlayer.start();
+        Log.e("Playing initial instr:", "playing " + assetPath);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    } else {
+      initialPlayer.release();
+    }
+  }
+
   private void playSound(String path) {
     Log.e("suan play sound", "path " + path);
     try {
@@ -77,6 +159,7 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       player.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
           descriptor.getLength());
       descriptor.close();
+
 
       player.prepare();
       player.setVolume(1f, 1f);

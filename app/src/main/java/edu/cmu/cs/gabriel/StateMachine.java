@@ -34,6 +34,13 @@ public class StateMachine {
   public static final int PAD_WAIT_RIGHT_PAD = -3;
   public static final int PAD_RIGHT_PAD = -2;
 
+  //Prep stages are for the period before
+  public static final int PREP_A = 50;
+  public static final int PREP_B = 51;
+  public static final int PREP_C = 52;
+  public static final int PREP_D = 53;
+  public static final int PREP_E = 54;
+
   public static final int RESP_AGE_DETECT_YES = 1;
   public static final int RESP_AGE_DETECT_NO = 2;
   public static final int RESP_PEEL_PAD_LEFT = 3;

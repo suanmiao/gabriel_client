@@ -8,7 +8,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import com.google.android.glass.view.WindowUtils;
+//import com.google.android.glass.view.WindowUtils;
 
 public class BaseVoiceCommandActivity extends Activity {
 
@@ -48,6 +48,7 @@ public class BaseVoiceCommandActivity extends Activity {
     if (isMyMenu(featureId)) {
       switch (item.getItemId()) {
         case R.id.instruction_yes:
+
           return true;
         case R.id.instruction_no:
           return true;
@@ -69,7 +70,8 @@ public class BaseVoiceCommandActivity extends Activity {
    * menu that are controlled by this menu activity.
    */
   private boolean isMyMenu(int featureId) {
-    return featureId == Window.FEATURE_OPTIONS_PANEL
-        || featureId == WindowUtils.FEATURE_VOICE_COMMANDS;
+//    return featureId == Window.FEATURE_OPTIONS_PANEL
+//        || featureId == WindowUtils.FEATURE_VOICE_COMMANDS;
+    return false;
   }
 }

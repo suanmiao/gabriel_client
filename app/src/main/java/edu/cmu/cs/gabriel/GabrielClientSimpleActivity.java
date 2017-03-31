@@ -117,6 +117,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 int leave = yesCounter % 5;
                 if (leave == 0){
                     NetworkProtocol.USER_RESPONSE = StateMachine.RESP_START_DETECTION;
+                    speechHelper.playInitialStages();
                 }else if (leave == 1){
                     //confirm the user's age is same as system's judgement
                     NetworkProtocol.USER_RESPONSE = StateMachine.RESP_AGE_DETECT_YES;
