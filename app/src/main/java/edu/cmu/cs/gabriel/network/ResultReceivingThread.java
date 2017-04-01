@@ -219,7 +219,7 @@ public class ResultReceivingThread extends Thread {
           parseReceivedDataByType(recvJSON, data, NetworkProtocol.HEADER_MESSAGE_AED_STATE);
       if (aedStateData != null) {
         String aedStateString = new String(aedStateData);
-        //Log.e("REC aedStateString",aedStateString);
+        Log.e("REC aedStateString",aedStateString);
         StateMachine.StateModel model =
             mGson.fromJson(aedStateString, StateMachine.StateModel.class);
         model.frameId = frameID;
