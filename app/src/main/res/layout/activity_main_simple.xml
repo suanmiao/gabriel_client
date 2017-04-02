@@ -27,7 +27,7 @@
             android:layout_width="300dp"
             android:layout_height="400dp"
             android:layout_alignParentRight="true"
-            android:background="@android:color/white">
+            android:background="@android:color/transparent">
 
             <TextView
                 android:layout_marginTop="10dp"

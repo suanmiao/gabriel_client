@@ -27,23 +27,38 @@ public class StateMachine {
   public static final int PAD_DETECT_AGE = -10;
   public static final int PAD_AGE_CONFIRM = -9;
   public static final int PAD_CORRECT_PAD = -8;
-  public static final int PAD_PEEL_PAD =  -7;
+
+  public static final int PAD_PEEL_LEFT =  -7;
   public static final int PAD_LEFT_PAD_SHOW = -6;
   public static final int PAD_WAIT_LEFT_PAD = -5;
   public static final int PAD_LEFT_PAD = -4;
+  public static final int PAD_PEEL_RIGHT = -13;
   public static final int PAD_WAIT_RIGHT_PAD = -3;
   public static final int PAD_RIGHT_PAD = -2;
+  public static final int PAD_FINISH = -12;
+  public static final int PAD_DEFIB_CONFIRM = -14;
 
-  public static final int RESP_AGE_DETECT_YES = 11;
-  public static final int RESP_AGE_DETECT_NO = 12;
-  public static final int RESP_PEEL_PAD_LEFT = 13;
-  public static final int RESP_PEEL_PAD_RIGHT = 17;
-  public static final int RESP_LEFT_PAD_FINISHED = 14;
-  public static final int RESP_RIGHT_PAD_FINISHED = 15;
-  public static final int RESP_PAD_APPLYING_FINISHED = 18;
-  public static final int RESP_START_DETECTION = 16;
-  public static final int RESP_DEFIB_YES = 19;
-  public static final int RESP_DEFIB_NO = 20;
+//  public static final int RESP_AGE_DETECT_YES = 11;
+//  public static final int RESP_AGE_DETECT_NO = 12;
+//  public static final int RESP_PEEL_PAD_LEFT = 13;
+//  public static final int RESP_PEEL_PAD_RIGHT = 17;
+//  public static final int RESP_LEFT_PAD_FINISHED = 14;
+//  public static final int RESP_RIGHT_PAD_FINISHED = 15;
+//  public static final int RESP_PAD_APPLYING_FINISHED = 18;
+//  public static final int RESP_START_DETECTION = 16;
+//  public static final int RESP_DEFIB_YES = 19;
+//  public static final int RESP_DEFIB_NO = 20;
+
+  public static final int RESP_AGE_DETECT_YES = 1;
+  public static final int RESP_AGE_DETECT_NO = 2;
+  public static final int RESP_PEEL_PAD_LEFT = 3;
+  public static final int RESP_PEEL_PAD_RIGHT = 7;
+  public static final int RESP_LEFT_PAD_FINISHED = 4;
+  public static final int RESP_RIGHT_PAD_FINISHED = 5;
+  public static final int RESP_PAD_APPLYING_FINISHED = 8;
+  public static final int RESP_START_DETECTION = 6;
+  public static final int RESP_DEFIB_YES = 9;
+  public static final int RESP_DEFIB_NO = 10;
 
   public static final int TIMEOUT_NONE = -100;
 
@@ -54,6 +69,7 @@ public class StateMachine {
   private Handler uiHandler;
 
   public static String getStateStrByNum(int num){
+    Log.e("Main",String.valueOf(num));
     String str = "none";
       switch (num){
         case AED_NONE:
@@ -77,20 +93,26 @@ public class StateMachine {
         case PAD_NONE:
           str = "PAD_NONE";
           break;
+        case PAD_DETECT_AGE:
+          str = "PAD_DETECT_AGE";
+          break;
         case PAD_AGE_CONFIRM:
           str = "PAD_AGE_CONFIRM";
           break;
         case PAD_CORRECT_PAD:
           str = "PAD_CORRECT_PAD";
           break;
-        case PAD_PEEL_PAD:
-          str = "PAD_PEEL_PAD";
+        case PAD_PEEL_LEFT:
+          str = "PAD_PEEL_LEFT";
           break;
         case PAD_LEFT_PAD_SHOW:
           str = "PAD_LEFT_PAD_SHOW";
           break;
         case PAD_LEFT_PAD:
           str = "PAD_LEFT_PAD";
+          break;
+        case PAD_PEEL_RIGHT:
+          str = "PAD_PEEL_RIGHT";
           break;
         case PAD_WAIT_LEFT_PAD:
           str = "PAD_WAIT_LEFT_PAD";
@@ -100,6 +122,12 @@ public class StateMachine {
           break;
         case PAD_RIGHT_PAD:
           str = "PAD_RIGHT_PAD";
+          break;
+        case PAD_FINISH:
+          str = "PAD_FINISH";
+          break;
+        case PAD_DEFIB_CONFIRM:
+          str = "PAD_DEFIB_CONFIRM";
           break;
       }
     return str;
@@ -159,6 +187,7 @@ public class StateMachine {
       PAD_WRONG_PAD,
       PAD_WRONG_LEFT,
       PAD_DETECT,
+      PAD_DETECT_AGE,
       PATIENT_IS_ADULT,
       PAD_CORR_PAD,
       PAD_CORR_LEFT,
@@ -200,13 +229,18 @@ public class StateMachine {
     public List<Float> frame_orange_flash_box;
 
     public boolean frame_joints = false;
-    public List<Float> joints;
+    public List<List<Float>> joints;
 
     public int pad_adult = -1;
     public boolean pad_wrong_pad = false;
     public boolean pad_wrong_left = false;
     public int[] pad_detect = new int[2];
     public int patient_is_adult = -1;
+
+    public StateModel(){
+      pad_detect[0] = -1;
+      pad_detect[1] = -1;
+    }
 
     @Override
     public String toString() {
@@ -247,24 +281,42 @@ public class StateMachine {
   }
 
   public void updateState(StateModel model) {
+
     StateUpdateEvent event = new StateUpdateEvent(this.model, model);
+
     if (model.aed_state != this.model.aed_state) {
       event.addField(StateUpdateEvent.Field.AED_STATE);
     }
     if (model.timeout_state != this.model.timeout_state) {
       event.addField(StateUpdateEvent.Field.TIMEOUT_STATE);
     }
-
-      event.addField(StateUpdateEvent.Field.PAD_Adult);
-      event.addField(StateUpdateEvent.Field.PAD_DETECT);
-      event.addField(StateUpdateEvent.Field.PAD_WRONG_LEFT);
-      event.addField(StateUpdateEvent.Field.PAD_WRONG_PAD);
+    if (model.patient_is_adult != this.model.patient_is_adult){
       event.addField(StateUpdateEvent.Field.PATIENT_IS_ADULT);
-      event.addField(StateUpdateEvent.Field.PAD_CORR_LEFT);
-      event.addField(StateUpdateEvent.Field.PAD_CORR_PAD);
-      event.addField(StateUpdateEvent.Field.PAD_CORR_DETECT);
-      event.addField(StateUpdateEvent.Field.PAD_DETECT_RIGHT);
-      event.addField(StateUpdateEvent.Field.PAD_CORR_DETECT_RIGHT);
+    }
+    if (model.pad_adult != this.model.pad_adult){
+      event.addField(StateUpdateEvent.Field.PAD_Adult);
+    }
+
+    if(model.pad_wrong_left != this.model.pad_wrong_left){
+      event.addField(StateUpdateEvent.Field.PAD_WRONG_LEFT);
+    }
+
+    if(model.pad_wrong_pad != this.model.pad_wrong_pad){
+      event.addField(StateUpdateEvent.Field.PAD_WRONG_PAD);
+    }
+    if(model.pad_detect[0] != this.model.pad_detect[0] || model.pad_detect[1] != this.model.pad_detect[1]){
+      event.addField(StateUpdateEvent.Field.PAD_DETECT);
+    }
+
+//      event.addField(StateUpdateEvent.Field.PAD_Adult);
+//      event.addField(StateUpdateEvent.Field.PAD_WRONG_LEFT);
+//      event.addField(StateUpdateEvent.Field.PAD_WRONG_PAD);
+//      event.addField(StateUpdateEvent.Field.PATIENT_IS_ADULT);
+//      event.addField(StateUpdateEvent.Field.PAD_CORR_LEFT);
+//      event.addField(StateUpdateEvent.Field.PAD_CORR_PAD);
+//      event.addField(StateUpdateEvent.Field.PAD_CORR_DETECT);
+//      event.addField(StateUpdateEvent.Field.PAD_DETECT_RIGHT);
+//      event.addField(StateUpdateEvent.Field.PAD_CORR_DETECT_RIGHT);
 
       event.addField(StateUpdateEvent.Field.FRAME_AED);
       event.addField(StateUpdateEvent.Field.FRAME_ORANGE_BTN);
