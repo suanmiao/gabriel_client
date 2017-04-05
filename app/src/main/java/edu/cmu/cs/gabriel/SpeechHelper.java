@@ -71,9 +71,9 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
   public HashMap<Integer, String> respInstructionMap = new HashMap<Integer, String>();
   public HashMap<Field, String> fieldInstructionMap = new HashMap<Field, String>();
 
-//  private List<String> initialFiles = Arrays.asList("instr_1.m4a","instr_2.m4a",
-//          "instr_3.m4a","instr_4.m4a","instr_5a.m4a");
-  private List<String> initialFiles = Arrays.asList("instr_5a.m4a");
+  private List<String> initialFiles = Arrays.asList("instr_1.m4a","instr_2.m4a",
+          "instr_3.m4a","instr_4.m4a","instr_5a.m4a", "instr_5b.m4a");
+//  private List<String> initialFiles = Arrays.asList("instr_5a.m4a");
   private int initialCounter = 0;
   private int initialStages = initialFiles.size();
 
@@ -126,6 +126,8 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     timeoutInstructionMap.put(AED_ON, "07_no_plug.wav");
     timeoutInstructionMap.put(AED_PLUGIN, "08_no_shock.wav");
     timeoutInstructionMap.put(AED_SHOCK, "10.wav");
+
+    Log.e("###", "Setting up");
 
     try {
       this.initialPlayer = new MediaPlayer();
@@ -288,6 +290,7 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
         e.printStackTrace();
       }
     } else {
+      Log.e("Stopped playing init at", "#"+initialCounter+"vs"+initialStages);
       initialPlayer.release();
     }
   }

@@ -1,5 +1,7 @@
 package edu.cmu.cs.gabriel;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
@@ -10,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Vibrator;
+import android.speech.RecognizerIntent;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -26,7 +29,9 @@ import org.greenrobot.eventbus.Subscribe;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import edu.cmu.cs.gabriel.network.NetworkProtocol;
 import edu.cmu.cs.gabriel.network.ResultReceivingThread;
@@ -82,6 +87,16 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     private static final int client_none = -10000;
     int currentState = client_none;
 
+    /** For speech to text **/
+    private Handler mHandler;
+    private final int SPEECH_INPUT = 1234;
+    private int respYes = 1;
+    private int respNo = -1;
+    private int respNoInit = 0;
+    private int introLength = 32;
+    private String userYes = "yes";
+    private String userNo = "no";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,7 +108,9 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         initHiddenInfoPanel();
         mWindow = (ImageView)findViewById(R.id.camera_window);
         speechHelper.playInitialStages();
+        mHandler = new Handler();
         initWidget();
+        mHandler.postDelayed(mStarter, introLength * 1000);
     }
 
     private void initHiddenInfoPanel(){
@@ -114,16 +131,76 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         mYes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                stateUserResponse(1);
+                stateUserResponse(respYes);
+                mHandler.postDelayed(mRunner, 100);
             }
         });
 
         mNo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                stateUserResponse(-1);
+                stateUserResponse(respNo);
             }
         });
+    }
+
+
+    /**
+     * Showing google speech input dialog
+     * */
+    private void promptSpeechInput() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        try {
+            startActivityForResult(intent, SPEECH_INPUT);
+        } catch (ActivityNotFoundException ex) {
+            Log.e("Voice recognition", "didn't go through");
+        }
+    };
+
+    private Runnable mRunner = new Runnable() {
+        public void run() {
+            promptSpeechInput();
+        }
+    };
+
+    private Runnable mStarter = new Runnable() {
+        public void run() {
+            Log.e("@@@ BLAH", "BLAH");
+            stateUserResponse(respNoInit);
+        }
+    };
+
+    /**
+     * Receiving speech input
+     * */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        switch (requestCode) {
+            case SPEECH_INPUT: {
+                if (resultCode == RESULT_OK && data != null) {
+                    ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    String s = result.get(0);
+                    s = s.toLowerCase();
+                    if (s.contains(userYes)) {
+                        Log.e("This YES was received:", s);
+                        stateUserResponse(respYes);
+                    } else if (s.contains(userNo)) {
+                        Log.e("This NO was received:", s);
+                        stateUserResponse(respNo);
+                    } else {
+                        Log.e("No resp was received:", s);
+                        stateUserResponse(respNoInit);
+                    }
+                }
+                break;
+            }
+
+        }
     }
 
     /*
@@ -137,13 +214,16 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
             return;
         }
 
+        Log.e("### State user response", "resp = "+yesOrNo);
+        Log.e("### Current state", currentState+";"+StateMachine.PAD_NONE);
+
         switch (currentState){
 
             case client_none:
                 break;
 
             case StateMachine.PAD_NONE:
-                resp = StateMachine.RESP_START_DETECTION;
+                 resp = StateMachine.RESP_START_DETECTION;
                  NetworkProtocol.USER_RESPONSE = resp;
                  speechHelper.playInstructionSound(resp);
                  break;
@@ -156,21 +236,21 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 break;
 
             case StateMachine.PAD_AGE_CONFIRM:
-                if(yesOrNo == 1){
+                if(yesOrNo == respYes){
                     resp = StateMachine.RESP_AGE_DETECT_YES;
                     NetworkProtocol.USER_RESPONSE = resp;
-                }else if(yesOrNo == -1){
+                }else if(yesOrNo == respNo){
                     resp = StateMachine.RESP_AGE_DETECT_NO;
                     NetworkProtocol.USER_RESPONSE = resp;
                 }
                 break;
 
             case StateMachine.PAD_DEFIB_CONFIRM:
-                if(yesOrNo == 1){
+                if(yesOrNo == respYes){
                     speechHelper.updateMapDefib(true);
                     resp = StateMachine.RESP_DEFIB_YES;
                     NetworkProtocol.USER_RESPONSE = resp;
-                }else if(yesOrNo == -1){
+                }else if(yesOrNo == respNo){
                     speechHelper.updateMapDefib(false);
                     resp = StateMachine.RESP_DEFIB_NO;
                     NetworkProtocol.USER_RESPONSE = resp;
@@ -332,6 +412,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                             speechHelper.updateMapAdult(false);
                             speechHelper.playInstructionSound(field);
                         }
+                        mHandler.postDelayed(mRunner, 100);
                     }else if(model.aed_state == StateMachine.PAD_DEFIB_CONFIRM){
                         //means
                         modelResp = String.valueOf(model.patient_is_adult);
