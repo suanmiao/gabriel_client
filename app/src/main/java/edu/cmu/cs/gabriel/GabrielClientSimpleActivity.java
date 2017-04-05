@@ -84,6 +84,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     private TextView mHiddenPadDetect;
     private TextView mHiddenPatientAdult;
     private TextView mAEDBoxState;
+    private TextView mJoints;
     private static final int client_none = -10000;
     int currentState = client_none;
 
@@ -122,6 +123,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         mHiddenPatientAdult = (TextView)findViewById(R.id.hidden_patient_adult);
         mHiddenWrongLeftPad = (TextView)findViewById(R.id.hidden_pad_wrong_left);
         mAEDBoxState = (TextView)findViewById(R.id.hidden_frame_objects);
+        mJoints = (TextView)findViewById(R.id.hidden_pad_joints);
         mYes = (Button) findViewById(R.id.main_yes);
         mNo = (Button)findViewById(R.id.main_no);
     }
@@ -326,9 +328,26 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 case FRAME_ORANGE_FLASH:
                     isOrangeFlashFind = model.frame_orange_flash;
                     break;
-                case FRAME_JOINTS:
-                    isJointsFind = model.frame_joints;
-                    break;
+//                case FRAME_JOINTS:
+//                    isJointsFind = model.frame_joints;
+//                    if(isJointsFind){
+//                        String tmp = "";
+//                        for (int i = 0; i != model.joints.size(); i++){
+//
+//                            List<Float> item = model.joints.get(i);
+//
+//                            for(int j = 0; j != item.size(); j++){
+//                                if(item.get(j) != null) {
+//                                    tmp += String.valueOf(item.get(j));
+//                                    tmp += " ";
+//                                }
+//                            }
+//                        }
+//                        mJoints.setText(tmp);
+//                    }else{
+//                        mJoints.setText("no joints find");
+//                    }
+//                    break;
                 case PAD_Adult:
                     Log.e("suan","PAD_Adult");
                     mHiddenAdultPAD.setText(String.valueOf(model.pad_adult));
