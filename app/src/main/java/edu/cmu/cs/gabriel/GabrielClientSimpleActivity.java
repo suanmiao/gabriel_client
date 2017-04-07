@@ -170,7 +170,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
 
     private Runnable mStarter = new Runnable() {
         public void run() {
-            Log.e("@@@ BLAH", "BLAH");
             stateUserResponse(respNoInit);
         }
     };
@@ -184,18 +183,24 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
 
         switch (requestCode) {
             case SPEECH_INPUT: {
+                Log.e("###", "Got speech data result");
+                if (data != null) {
+                    Log.e("###", "Data:"+data);
+                } else {
+                    Log.e("###", "No data");
+                }
                 if (resultCode == RESULT_OK && data != null) {
                     ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     String s = result.get(0);
                     s = s.toLowerCase();
                     if (s.contains(userYes)) {
-                        Log.e("This YES was received:", s);
+                        Log.e("This YES was received:", "resp="+s);
                         stateUserResponse(respYes);
                     } else if (s.contains(userNo)) {
-                        Log.e("This NO was received:", s);
+                        Log.e("This NO was received:", "resp="+s);
                         stateUserResponse(respNo);
                     } else {
-                        Log.e("No resp was received:", s);
+                        Log.e("No resp was received:", "resp="+s);
                         stateUserResponse(respNoInit);
                     }
                 }
@@ -211,6 +216,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     private void stateUserResponse(int yesOrNo){
 
         int resp = -10000;
+        int instr = -10000;
         if (!speechHelper.is_finished){
             Toast.makeText(getApplicationContext(),"wait until voice finished",Toast.LENGTH_SHORT).show();
             return;
@@ -241,9 +247,11 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 if(yesOrNo == respYes){
                     resp = StateMachine.RESP_AGE_DETECT_YES;
                     NetworkProtocol.USER_RESPONSE = resp;
+                    Log.e("###", "Responding YES to server");
                 }else if(yesOrNo == respNo){
                     resp = StateMachine.RESP_AGE_DETECT_NO;
                     NetworkProtocol.USER_RESPONSE = resp;
+                    Log.e("###", "Responding NO to server");
                 }
                 break;
 
@@ -257,24 +265,36 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     resp = StateMachine.RESP_DEFIB_NO;
                     NetworkProtocol.USER_RESPONSE = resp;
                 }
+                instr = StateMachine.PAD_DEFIB_CONFIRM;
+                speechHelper.playInstructionSound(instr);
+                mHandler.postDelayed(mRunner, speechHelper.getInstrLen(instr));
                 break;
 
             case StateMachine.PAD_PEEL_LEFT:
-                resp = StateMachine.RESP_PEEL_PAD_LEFT;
+                // TORESOLVE
+                resp = StateMachine.RESP_PEEL_PAD_LEFT; // There is no mapping for this instruction
                 NetworkProtocol.USER_RESPONSE = resp;
-                speechHelper.playInstructionSound(resp);
+                instr = StateMachine.PAD_PEEL_LEFT;
+                speechHelper.playInstructionSound(instr);
+                mHandler.postDelayed(mRunner, speechHelper.getInstrLen(instr));
                 break;
 
             case StateMachine.PAD_WAIT_LEFT_PAD:
-                resp = StateMachine.RESP_LEFT_PAD_FINISHED;
+                //TORESOLVE
+                resp = StateMachine.RESP_LEFT_PAD_FINISHED; // There is no mapping for this instruction
                 NetworkProtocol.USER_RESPONSE = resp;
-                speechHelper.playInstructionSound(resp);
+                instr = StateMachine.PAD_WAIT_LEFT_PAD;
+                speechHelper.playInstructionSound(instr);
+                mHandler.postDelayed(mRunner, speechHelper.getInstrLen(instr));
                 break;
 
             case StateMachine.PAD_PEEL_RIGHT:
-                NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_RIGHT;
+                //TORESOLVE
+                NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_RIGHT; // There is no mapping for this instruction
                 resp = StateMachine.RESP_PEEL_PAD_RIGHT;
-                speechHelper.playInstructionSound(resp);
+                instr = StateMachine.PAD_PEEL_RIGHT;
+                speechHelper.playInstructionSound(instr);
+                mHandler.postDelayed(mRunner, speechHelper.getInstrLen(instr));
                 break;
 
             case StateMachine.PAD_WAIT_RIGHT_PAD:
@@ -286,7 +306,9 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
             case StateMachine.PAD_FINISH:
                 NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PAD_APPLYING_FINISHED;
                 resp = StateMachine.RESP_PAD_APPLYING_FINISHED;
-                speechHelper.playInstructionSound(resp);
+                instr = StateMachine.PAD_FINISH;
+                speechHelper.playInstructionSound(instr);
+                mHandler.postDelayed(mRunner, speechHelper.getInstrLen(instr));
                 break;
         }
         Toast.makeText(getApplicationContext(),StateMachine.getRespStrByNum(resp),Toast.LENGTH_LONG).show();
@@ -377,6 +399,10 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                         if (resp_2 == 1) {
                             speechHelper.playLeftWrongViewSound();
                         }
+                        // TODO: is this the case for correct placement?
+                        if (resp_1 == 0 && resp_2 == 0) {
+                            speechHelper.playInstructionSound(StateMachine.PAD_CORRECT_PAD);
+                        }
                     }
                     if(model.aed_state == StateMachine.PAD_RIGHT_PAD) {
                         Log.e("suan", "PAD_RIGHT_PAD" + model.aed_state);
@@ -392,8 +418,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                             speechHelper.playRightWrongViewSound();
                         }
                     }
-
-
 //                        if (resp == 1) {
 //                            // There was a detection error
 //                            // TODO: check if this is the actual AED state to differentiate step 11 from 14
@@ -431,15 +455,15 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                             speechHelper.updateMapAdult(false);
                             speechHelper.playInstructionSound(field);
                         }
-                        mHandler.postDelayed(mRunner, 100);
+                        mHandler.postDelayed(mRunner, speechHelper.getInstrLen(field));
                     }else if(model.aed_state == StateMachine.PAD_DEFIB_CONFIRM){
                         //means
                         modelResp = String.valueOf(model.patient_is_adult);
                         mHiddenPatientAdult.setText(modelResp);
                         if (modelResp.equals("0")) {
-                            speechHelper.updateMapAdult(true);
+                            speechHelper.updateMapDefib(true);
                         } else if(modelResp.equals("1")) {
-                            speechHelper.updateMapAdult(false);
+                            speechHelper.updateMapDefib(false);
                         }
                     }
                     break;

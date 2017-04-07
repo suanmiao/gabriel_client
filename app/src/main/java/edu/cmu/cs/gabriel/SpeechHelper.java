@@ -70,10 +70,13 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
   public HashMap<Integer, String> timeoutInstructionMap = new HashMap<Integer, String>();
   public HashMap<Integer, String> respInstructionMap = new HashMap<Integer, String>();
   public HashMap<Field, String> fieldInstructionMap = new HashMap<Field, String>();
+  public HashMap<Integer, Integer> padStageInstructionLen = new HashMap<Integer, Integer>();
+  public HashMap<Integer, Integer> respInstructionLen = new HashMap<Integer, Integer>();
+  public HashMap<Field, Integer> fieldInstructionLen = new HashMap<Field, Integer>();
 
-  private List<String> initialFiles = Arrays.asList("instr_1.m4a","instr_2.m4a",
-          "instr_3.m4a","instr_4.m4a","instr_5a.m4a", "instr_5b.m4a");
-//  private List<String> initialFiles = Arrays.asList("instr_5a.m4a");
+//  private List<String> initialFiles = Arrays.asList("instr_1.m4a","instr_2.m4a",
+//          "instr_3.m4a","instr_4.m4a","instr_5a.m4a");
+  private List<String> initialFiles = Arrays.asList("instr_5a.m4a");
   private int initialCounter = 0;
   private int initialStages = initialFiles.size();
 
@@ -100,7 +103,6 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     padStageInstructionMap.put(PAD_DEFIB_CONFIRM,"instr_7.m4a");
     padStageInstructionMap.put(PAD_LEFT_PAD_SHOW,"instr_8.m4a");
     padStageInstructionMap.put(PAD_PEEL_LEFT,"instr_9.m4a");
-//    padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "instr_10.m4a");
     padStageInstructionMap.put(PAD_LEFT_PAD, "instr_11.m4a");
     padStageInstructionMap.put(PAD_PEEL_RIGHT,"instr_12.m4a");
     padStageInstructionMap.put(PAD_WAIT_RIGHT_PAD,"instr_13.m4a");
@@ -108,17 +110,7 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     padStageInstructionMap.put(PAD_FINISH,"instr_15.m4a");
 
     //Pre-AED instructions common to all groups (adult/child/bulge/nobulge)
-//    padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_7.m4a");
-    //
     respInstructionMap.put(RESP_PAD_APPLYING_FINISHED, "instr_16.m4a");
-
-    //
-//    fieldInstructionMap.put(PAD_CORR_PAD, "instr_7.m4a");
-//    fieldInstructionMap.put(PAD_WRONG_LEFT, "instr_8_err.m4a");
-//    fieldInstructionMap.put(PAD_CORR_LEFT, "instr_9.m4a");
-//    fieldInstructionMap.put(PAD_CORR_DETECT, "instr_12.m4a");
-//    fieldInstructionMap.put(PAD_DETECT_RIGHT, "instr_14_err_placement.m4a");
-//    fieldInstructionMap.put(PAD_CORR_DETECT_RIGHT, "instr_15.m4a");
 
     //instruction for timeout
     timeoutInstructionMap.put(AED_NONE, "06_no_aed.wav");
@@ -126,6 +118,11 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     timeoutInstructionMap.put(AED_ON, "07_no_plug.wav");
     timeoutInstructionMap.put(AED_PLUGIN, "08_no_shock.wav");
     timeoutInstructionMap.put(AED_SHOCK, "10.wav");
+
+    padStageInstructionLen.put(PAD_DEFIB_CONFIRM, 9500);
+    padStageInstructionLen.put(PAD_PEEL_LEFT, 6500);
+    padStageInstructionLen.put(PAD_PEEL_RIGHT, 9500);
+    padStageInstructionLen.put(PAD_FINISH, 10500);
 
     Log.e("###", "Setting up");
 
@@ -150,23 +147,39 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     }
   }
 
+  public int getInstrLen(int stage) {
+    if (padStageInstructionLen.containsKey(stage)) {
+      return padStageInstructionLen.get(stage);
+    } else if (respInstructionLen.containsKey(stage)) {
+      return respInstructionLen.get(stage);
+    } else {
+      return 0;
+    }
+  }
+
+  public int getInstrLen(Field field) {
+    if (fieldInstructionLen.containsKey(field)) {
+      return fieldInstructionLen.get(field);
+    } else {
+      return 0;
+    }
+  }
+
   // Add instructions according to whether the patient is an adult
   public void updateMapAdult(boolean isAdult) {
     // Remove from fields first because there may have been an age detection error
-//    fieldInstructionMap.remove(PATIENT_IS_ADULT);
-//    respInstructionMap.remove(RESP_AGE_DETECT_YES);
-//    fieldInstructionMap.remove(PAD_WRONG_PAD);
+    fieldInstructionMap.remove(PATIENT_IS_ADULT);
+    padStageInstructionMap.remove(PAD_CORRECT_PAD);
+    fieldInstructionMap.remove(PAD_WRONG_PAD);
     if (isAdult) {
       fieldInstructionMap.put(PATIENT_IS_ADULT, "instr_5c_adult.m4a");
+      fieldInstructionLen.put(PATIENT_IS_ADULT, 6500);
       padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_6_blue.m4a");
-//      respInstructionMap.put(RESP_AGE_DETECT_YES, "instr_6_blue.m4a");
-//      respInstructionMap.put(RESP_AGE_DETECT_NO, "instr_6_red.m4a");
       fieldInstructionMap.put(PAD_WRONG_PAD, "instr_6_blue_err.m4a");
     } else {
       fieldInstructionMap.put(PATIENT_IS_ADULT, "instr_5c_child.m4a");
+      fieldInstructionLen.put(PATIENT_IS_ADULT, 6500);
       padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_6_red.m4a");
-//      respInstructionMap.put(RESP_AGE_DETECT_YES, "instr_6_red.m4a");
-//      respInstructionMap.put(RESP_AGE_DETECT_NO, "instr_6_blue.m4a");
       fieldInstructionMap.put(PAD_WRONG_PAD, "instr_6_red_err.m4a");
     }
   }
@@ -176,20 +189,14 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     if (hasDefib) {
       respInstructionMap.put(RESP_DEFIB_YES, "instr_8.m4a");
       padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "instr_10_bulge.m4a");
+      padStageInstructionLen.put(PAD_WAIT_LEFT_PAD, 15200);
       fieldInstructionMap.put(PAD_DETECT, "instr_11_err_bulge.m4a");
     } else {
       respInstructionMap.put(RESP_DEFIB_NO, "instr_8.m4a");
       padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "instr_10_nobulge.m4a");
+      padStageInstructionLen.put(PAD_WAIT_LEFT_PAD, 15200);
       fieldInstructionMap.put(PAD_DETECT, "instr_11_err_nobulge.m4a");
     }
-  }
-
-  public void playInstructionSound(Field f) {
-    if (!fieldInstructionMap.containsKey(f)) {
-      return;
-    }
-    String assetPath = fieldInstructionMap.get(f);
-    playSound(assetPath);
   }
 
   public void playLeftWrongViewSound() {
@@ -209,6 +216,14 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
 
   public void playRightWrongPlacementSound(){
     String assetPath = "instr_14_err_placement.m4a";
+    playSound(assetPath);
+  }
+
+  public void playInstructionSound(Field f) {
+    if (!fieldInstructionMap.containsKey(f)) {
+      return;
+    }
+    String assetPath = fieldInstructionMap.get(f);
     playSound(assetPath);
   }
 
