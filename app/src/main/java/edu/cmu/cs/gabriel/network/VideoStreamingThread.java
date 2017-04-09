@@ -97,9 +97,7 @@ public class VideoStreamingThread extends Thread {
         long dataTime = 0;
         long compressedTime = 0;
         long sendingFrameID = 0;
-        Log.e(LOG_TAG, "waiting for lock");
         synchronized (frameLock) {
-          Log.e(LOG_TAG, "frame buffer might be null" + this.frameBuffer);
           while (this.frameBuffer == null) {
             try {
               frameLock.wait();
@@ -107,7 +105,6 @@ public class VideoStreamingThread extends Thread {
               e.printStackTrace();
             }
           }
-          Log.e(LOG_TAG, "begin sending" + this.frameBuffer);
           data = this.frameBuffer;
           dataTime = System.currentTimeMillis();
 

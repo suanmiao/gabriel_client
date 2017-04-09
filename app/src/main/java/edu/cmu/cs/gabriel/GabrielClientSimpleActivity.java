@@ -27,7 +27,6 @@ import com.google.gson.Gson;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -108,7 +107,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         initHiddenInfoPanel();
         mWindow = (ImageView)findViewById(R.id.camera_window);
-        speechHelper.playInitialStages();
         mHandler = new Handler();
         initWidget();
         mHandler.postDelayed(mStarter, introLength * 1000);
@@ -210,6 +208,8 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         }
     }
 
+    public static final int YES = 1;
+    public static final int NO = -1;
     /*
      *  //1 yes, 0 not initialized, -1 No
      */
@@ -223,11 +223,25 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         }
 
         Log.e("### State user response", "resp = "+yesOrNo);
-        Log.e("### Current state", currentState+";"+StateMachine.PAD_NONE);
+        Log.e("### Current state", currentState + ";" + StateMachine.PAD_NONE);
 
         switch (currentState){
 
             case client_none:
+                break;
+
+            case StateMachine.PAD_PRE_1:
+                if(yesOrNo == YES) {
+                    resp = StateMachine.RESP_PAD_PRE_1;
+                    NetworkProtocol.USER_RESPONSE = resp;
+                }
+                break;
+
+            case StateMachine.PAD_PRE_2:
+                if(yesOrNo == YES) {
+                    resp = StateMachine.RESP_PAD_PRE_2;
+                    NetworkProtocol.USER_RESPONSE = resp;
+                }
                 break;
 
             case StateMachine.PAD_NONE:
@@ -235,13 +249,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                  NetworkProtocol.USER_RESPONSE = resp;
                  speechHelper.playInstructionSound(resp);
                  break;
-
-            case StateMachine.PAD_DETECT_AGE:
-                //begin age detection
-                resp = StateMachine.RESP_START_DETECTION;
-                NetworkProtocol.USER_RESPONSE = resp;
-                speechHelper.playInstructionSound(resp);
-                break;
 
             case StateMachine.PAD_AGE_CONFIRM:
                 if(yesOrNo == respYes){
@@ -334,8 +341,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     speechHelper.playStateChangeSound(currentState);
                 break;
                 case TIMEOUT_STATE:
-                    currentState = model.timeout_state;
-                    Log.e("suan","timeout_state "+currentState);
+                    Log.e(TAG,"timeout_state "+currentState);
                     speechHelper.playTimeoutSound(currentState);
                 break;
                 case FRAME_AED:
@@ -418,21 +424,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                             speechHelper.playRightWrongViewSound();
                         }
                     }
-//                        if (resp == 1) {
-//                            // There was a detection error
-//                            // TODO: check if this is the actual AED state to differentiate step 11 from 14
-//                            if (model.aed_state == StateMachine.PAD_LEFT_PAD_SHOW) {
-//                                speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_DETECT);
-//                            } else {
-//                                speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_DETECT_RIGHT);
-//                            }
-//                        } else {
-//                            if (model.aed_state == StateMachine.PAD_LEFT_PAD_SHOW) {
-//                                speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_CORR_DETECT);
-//                            } else {
-//                                speechHelper.playInstructionSound(StateMachine.StateUpdateEvent.Field.PAD_CORR_DETECT_RIGHT);
-//                            }
-//                        }
                     break;
                 case PAD_WRONG_LEFT:
                     if(model.aed_state == StateMachine.PAD_LEFT_PAD_SHOW) {
@@ -444,7 +435,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     }
                     break;
                 case PATIENT_IS_ADULT:
-                    Log.e("suan","PATIENT_IS_ADULT");
                     if(model.aed_state == StateMachine.PAD_AGE_CONFIRM) {
                         modelResp = String.valueOf(model.patient_is_adult);
                         mHiddenPatientAdult.setText(modelResp);

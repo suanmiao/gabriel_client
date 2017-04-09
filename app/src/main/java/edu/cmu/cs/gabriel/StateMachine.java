@@ -15,6 +15,8 @@ import org.greenrobot.eventbus.EventBus;
 
 public class StateMachine {
 
+  public static final String TAG = "StateMachine";
+
   public static StateMachine instance;
   public static final int AED_NONE = -1;
   public static final int AED_FOUND = 0;
@@ -23,10 +25,13 @@ public class StateMachine {
   public static final int AED_SHOCK = 3;
   public static final int AED_FINISH = 4;
 
+  public static final int PAD_PRE_1 = -16;
+  public static final int PAD_PRE_2 = -15;
   public static final int PAD_NONE = -11;
-  public static final int PAD_DETECT_AGE = -10;
   public static final int PAD_AGE_CONFIRM = -9;
   public static final int PAD_CORRECT_PAD = -8;
+  public static final int PAD_COMFIRM_PAD = -10;
+  public static final int PAD_DEFIB_CONFIRM = -14;
 
   public static final int PAD_PEEL_LEFT =  -7;
   public static final int PAD_LEFT_PAD_SHOW = -6;
@@ -36,40 +41,32 @@ public class StateMachine {
   public static final int PAD_WAIT_RIGHT_PAD = -3;
   public static final int PAD_RIGHT_PAD = -2;
   public static final int PAD_FINISH = -12;
-  public static final int PAD_DEFIB_CONFIRM = -14;
-
-//  public static final int RESP_AGE_DETECT_YES = 11;
-//  public static final int RESP_AGE_DETECT_NO = 12;
-//  public static final int RESP_PEEL_PAD_LEFT = 13;
-//  public static final int RESP_PEEL_PAD_RIGHT = 17;
-//  public static final int RESP_LEFT_PAD_FINISHED = 14;
-//  public static final int RESP_RIGHT_PAD_FINISHED = 15;
-//  public static final int RESP_PAD_APPLYING_FINISHED = 18;
-//  public static final int RESP_START_DETECTION = 16;
-//  public static final int RESP_DEFIB_YES = 19;
-//  public static final int RESP_DEFIB_NO = 20;
 
   public static final int RESP_AGE_DETECT_YES = 1;
   public static final int RESP_AGE_DETECT_NO = 2;
   public static final int RESP_PEEL_PAD_LEFT = 3;
-  public static final int RESP_PEEL_PAD_RIGHT = 7;
   public static final int RESP_LEFT_PAD_FINISHED = 4;
   public static final int RESP_RIGHT_PAD_FINISHED = 5;
-  public static final int RESP_PAD_APPLYING_FINISHED = 8;
   public static final int RESP_START_DETECTION = 6;
+
+  public static final int RESP_PEEL_PAD_RIGHT = 7;
+  public static final int RESP_PAD_APPLYING_FINISHED = 8;
   public static final int RESP_DEFIB_YES = 9;
   public static final int RESP_DEFIB_NO = 10;
+  public static final int RESP_PAD_PRE_1 = 11;
+  public static final int RESP_PAD_PRE_2 = 12;
+  public static final int RESP_PAD_CORRECT_PAD = 13;
 
-  public static final int TIMEOUT_NONE = -100;
+  public static final int TIMEOUT_NONE = -1;
 
   public StateModel model;
 
   public int token_size = 0;
 
-  private Handler uiHandler;
-
   public static String getStateStrByNum(int num){
-    Log.e("Main",String.valueOf(num));
+
+    Log.e(TAG,String.valueOf(num));
+
     String str = "none";
       switch (num){
         case AED_NONE:
@@ -93,8 +90,14 @@ public class StateMachine {
         case PAD_NONE:
           str = "PAD_NONE";
           break;
-        case PAD_DETECT_AGE:
-          str = "PAD_DETECT_AGE";
+        case PAD_PRE_1:
+          str = "PAD_PRE_1";
+          break;
+        case PAD_PRE_2:
+          str = "PAD_PRE_2";
+          break;
+        case PAD_COMFIRM_PAD:
+          str = "PAD_COMFIRM_PAD";
           break;
         case PAD_AGE_CONFIRM:
           str = "PAD_AGE_CONFIRM";
@@ -166,6 +169,15 @@ public class StateMachine {
         case RESP_DEFIB_NO:
           str = "RESP_DEFIB_NO";
           break;
+        case RESP_PAD_PRE_1:
+          str = "RESP_PAD_PRE_1";
+          break;
+        case RESP_PAD_PRE_2:
+          str = "RESP_PAD_PRE_2";
+          break;
+        case RESP_PAD_CORRECT_PAD:
+          str = "RESP_PAD_CORRECT_PAD";
+          break;
         case -1:
           str = "default value";
     }
@@ -187,7 +199,6 @@ public class StateMachine {
       PAD_WRONG_PAD,
       PAD_WRONG_LEFT,
       PAD_DETECT,
-      PAD_DETECT_AGE,
       PATIENT_IS_ADULT,
       PAD_CORR_PAD,
       PAD_CORR_LEFT,
@@ -213,7 +224,7 @@ public class StateMachine {
   public static class StateModel {
 
     public long frameId = -1;
-    public int aed_state = AED_NONE;
+    public int aed_state = -10086;
     public int timeout_state = TIMEOUT_NONE;
 
     public boolean frame_aed = false;
@@ -267,9 +278,8 @@ public class StateMachine {
   }
 
   public StateMachine() {
-    uiHandler = new Handler(Looper.getMainLooper());
     model = new StateModel();
-    model.aed_state = -1;
+    model.aed_state = -10086;
     model.timeout_state = TIMEOUT_NONE;
   }
 
@@ -284,11 +294,15 @@ public class StateMachine {
 
     StateUpdateEvent event = new StateUpdateEvent(this.model, model);
 
+//    Log.e(TAG,"timeout "+model.timeout_state+" "+this.model.timeout_state);
+
     if (model.aed_state != this.model.aed_state) {
       event.addField(StateUpdateEvent.Field.AED_STATE);
     }
     if (model.timeout_state != this.model.timeout_state) {
-      event.addField(StateUpdateEvent.Field.TIMEOUT_STATE);
+      if(model.timeout_state != TIMEOUT_NONE){
+        event.addField(StateUpdateEvent.Field.TIMEOUT_STATE);
+      }
     }
     if (model.patient_is_adult != this.model.patient_is_adult){
       event.addField(StateUpdateEvent.Field.PATIENT_IS_ADULT);
@@ -307,16 +321,6 @@ public class StateMachine {
     if(model.pad_detect[0] != this.model.pad_detect[0] || model.pad_detect[1] != this.model.pad_detect[1]){
       event.addField(StateUpdateEvent.Field.PAD_DETECT);
     }
-
-//      event.addField(StateUpdateEvent.Field.PAD_Adult);
-//      event.addField(StateUpdateEvent.Field.PAD_WRONG_LEFT);
-//      event.addField(StateUpdateEvent.Field.PAD_WRONG_PAD);
-//      event.addField(StateUpdateEvent.Field.PATIENT_IS_ADULT);
-//      event.addField(StateUpdateEvent.Field.PAD_CORR_LEFT);
-//      event.addField(StateUpdateEvent.Field.PAD_CORR_PAD);
-//      event.addField(StateUpdateEvent.Field.PAD_CORR_DETECT);
-//      event.addField(StateUpdateEvent.Field.PAD_DETECT_RIGHT);
-//      event.addField(StateUpdateEvent.Field.PAD_CORR_DETECT_RIGHT);
 
       event.addField(StateUpdateEvent.Field.FRAME_AED);
       event.addField(StateUpdateEvent.Field.FRAME_ORANGE_BTN);
