@@ -7,11 +7,15 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 
+import org.w3c.dom.ProcessingInstruction;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+
+import javax.security.auth.login.LoginException;
 
 import edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field;
 
@@ -29,29 +33,19 @@ import static edu.cmu.cs.gabriel.StateMachine.PAD_LEFT_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_LEFT_PAD_SHOW;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_PEEL_LEFT;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_PEEL_RIGHT;
+import static edu.cmu.cs.gabriel.StateMachine.PAD_PRE_1;
+import static edu.cmu.cs.gabriel.StateMachine.PAD_PRE_2;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_RIGHT_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_WAIT_LEFT_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_WAIT_RIGHT_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.RESP_DEFIB_NO;
-import static edu.cmu.cs.gabriel.StateMachine.RESP_LEFT_PAD_FINISHED;
 import static edu.cmu.cs.gabriel.StateMachine.RESP_PAD_APPLYING_FINISHED;
-import static edu.cmu.cs.gabriel.StateMachine.RESP_PEEL_PAD_LEFT;
-import static edu.cmu.cs.gabriel.StateMachine.RESP_PEEL_PAD_RIGHT;
 import static edu.cmu.cs.gabriel.StateMachine.RESP_START_DETECTION;
-import static edu.cmu.cs.gabriel.StateMachine.PAD_DETECT_AGE;
-import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_Adult;
-import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_CORR_DETECT;
-import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_CORR_DETECT_RIGHT;
-import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_CORR_LEFT;
-import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_CORR_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_DETECT;
-import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_DETECT_RIGHT;
-import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_WRONG_LEFT;
 import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PATIENT_IS_ADULT;
-import static edu.cmu.cs.gabriel.StateMachine.RESP_AGE_DETECT_YES;
-import static edu.cmu.cs.gabriel.StateMachine.RESP_AGE_DETECT_NO;
 import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_WRONG_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.RESP_DEFIB_YES;
+import static edu.cmu.cs.gabriel.StateMachine.TAG;
 import static edu.cmu.cs.gabriel.StateMachine.TIMEOUT_NONE;
 
 /**
@@ -74,13 +68,11 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
   public HashMap<Integer, Integer> respInstructionLen = new HashMap<Integer, Integer>();
   public HashMap<Field, Integer> fieldInstructionLen = new HashMap<Field, Integer>();
 
-//  private List<String> initialFiles = Arrays.asList("instr_1.m4a","instr_2.m4a",
-//          "instr_3.m4a","instr_4.m4a","instr_5a.m4a");
-  private List<String> initialFiles = Arrays.asList("instr_5a.m4a");
-  private int initialCounter = 0;
-  private int initialStages = initialFiles.size();
-
-  private MediaPlayer initialPlayer;
+  private MediaPlayer initialPlayer = new MediaPlayer();
+  int initialCounter = 0;
+  final List<String> pre2Files = Arrays.asList("instr_2.m4a",
+          "instr_3.m4a","instr_4.m4a","instr_5a.m4a");
+  int initialStages = pre2Files.size();
 
   public boolean is_finished = true;
 
@@ -88,17 +80,10 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
 
   public SpeechHelper(Context context) {
     this.context = context;
-    //tts = new TextToSpeech(context, this);
     this.player = new MediaPlayer();
 
-    //stage instruction for AED stage.
-    aedStageInstructionMap.put(AED_NONE, "01_look_at.wav");
-    aedStageInstructionMap.put(AED_FOUND, "02_turn_on.wav");
-    aedStageInstructionMap.put(AED_ON, "03_apply_pad.wav");
-    aedStageInstructionMap.put(AED_PLUGIN, "04_wait_further.wav");
-    aedStageInstructionMap.put(AED_SHOCK, "05_press_shock.wav");
-
     //audio for user's action
+    padStageInstructionMap.put(PAD_PRE_1,"instr_1.m4a");
     padStageInstructionMap.put(RESP_START_DETECTION, "instr_5b.m4a");
     padStageInstructionMap.put(PAD_DEFIB_CONFIRM,"instr_7.m4a");
     padStageInstructionMap.put(PAD_LEFT_PAD_SHOW,"instr_8.m4a");
@@ -113,6 +98,10 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     respInstructionMap.put(RESP_PAD_APPLYING_FINISHED, "instr_16.m4a");
 
     //instruction for timeout
+    timeoutInstructionMap.put(PAD_PRE_1,"instr_1.m4a");
+    //TODO ADD TIMEOUT FOR PAD_PRE_2
+    timeoutInstructionMap.put(AED_NONE,"");
+
     timeoutInstructionMap.put(AED_NONE, "06_no_aed.wav");
     timeoutInstructionMap.put(AED_FOUND, "7.wav");
     timeoutInstructionMap.put(AED_ON, "07_no_plug.wav");
@@ -126,26 +115,77 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
 
     Log.e("###", "Setting up");
 
+  }
+
+  /*
+   * Play the instructions for PAD_PRE_2
+   */
+  private void playPre2Instructions(){
+
+    Log.e(TAG,"playPre2Instructions");
     try {
-      this.initialPlayer = new MediaPlayer();
-
-      AssetFileDescriptor descriptor = context.getAssets().openFd("instr_1.m4a");
-      initialPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
+        AssetFileDescriptor descriptor = context.getAssets().openFd("instr_2.m4a");
+        initialPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
               descriptor.getLength());
-      descriptor.close();
+        descriptor.close();
 
-      initialPlayer.prepare();
-      initialPlayer.setVolume(1f, 1f);
-      initialPlayer.setLooping(false);
-      initialPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-        public void onCompletion(MediaPlayer mp) {
-          playInitialStages();
-        }
-      });
+        initialPlayer.prepare();
+        initialPlayer.setVolume(1f, 1f);
+        initialPlayer.setLooping(false);
+        initialPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+          public void onCompletion(MediaPlayer mp) {
+            playPre2InstructionsAudio();
+          }
+        });
+      initialPlayer.start();
+      initialCounter++;
     } catch (Exception e) {
       e.printStackTrace();
     }
   }
+
+  /*
+  * Implementation for play the instructions for PAD_PRE_2
+  */
+  private void playPre2InstructionsAudio() {
+    if (initialCounter == 0) {
+        initialPlayer.start();
+        initialCounter++;
+    } else if (initialCounter < initialStages) {
+      String assetPath = pre2Files.get(initialCounter);
+      initialCounter++;
+
+      try {
+        if (initialPlayer != null) {
+          if (initialPlayer.isPlaying()) {
+            initialPlayer.stop();
+          }
+          initialPlayer.reset();
+          initialPlayer = new MediaPlayer();
+        }
+
+        AssetFileDescriptor descriptor = context.getAssets().openFd(assetPath);
+        initialPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
+                descriptor.getLength());
+        descriptor.close();
+
+        initialPlayer.prepare();
+        initialPlayer.setVolume(1f, 1f);
+        initialPlayer.setLooping(false);
+        initialPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+          public void onCompletion(MediaPlayer mp) {
+            playPre2InstructionsAudio();
+          }
+        });
+        initialPlayer.start();
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    } else {
+      initialPlayer.release();
+    }
+  }
+
 
   public int getInstrLen(int stage) {
     if (padStageInstructionLen.containsKey(stage)) {
@@ -242,6 +282,11 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
   }
 
   public void playStateChangeSound(int stage){
+    if(stage == PAD_PRE_2){
+      playPre2Instructions();
+      return;
+    }
+
     String assetPath;
     if (padStageInstructionMap.containsKey(stage)) {
       assetPath = padStageInstructionMap.get(stage);
@@ -266,52 +311,12 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       return;
     }
     String assetPath = timeoutInstructionMap.get(stage);
+    Log.e(TAG,"timeout audio "+assetPath);
     playSound(assetPath);
   }
 
-  public void playInitialStages() {
-    if (initialCounter == 0) {
-      initialPlayer.start();
-      initialCounter++;
-    } else if (initialCounter < initialStages) {
-      String assetPath = initialFiles.get(initialCounter);
-      initialCounter++;
-
-      try {
-        if (initialPlayer != null) {
-          if (initialPlayer.isPlaying()) {
-            initialPlayer.stop();
-          }
-          initialPlayer.reset();
-          initialPlayer = new MediaPlayer();
-        }
-
-        AssetFileDescriptor descriptor = context.getAssets().openFd(assetPath);
-        initialPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
-                descriptor.getLength());
-        descriptor.close();
-
-        initialPlayer.prepare();
-        initialPlayer.setVolume(1f, 1f);
-        initialPlayer.setLooping(false);
-        initialPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-          public void onCompletion(MediaPlayer mp) {
-            playInitialStages();
-          }
-        });
-        initialPlayer.start();
-        Log.e("Playing initial instr:", "playing " + assetPath);
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    } else {
-      Log.e("Stopped playing init at", "#"+initialCounter+"vs"+initialStages);
-      initialPlayer.release();
-    }
-  }
-
   private void playSound(String path) {
-    if (!is_finished){
+    if (!is_finished) {
       return;
     }
     is_finished = false;
