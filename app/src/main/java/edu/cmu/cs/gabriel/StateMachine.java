@@ -28,6 +28,8 @@ public class StateMachine {
   public static final int PAD_PRE_1 = -16;
   public static final int PAD_PRE_2 = -15;
   public static final int PAD_NONE = -11;
+  public static final int PAD_DETECT_AGE = -17;
+
   public static final int PAD_AGE_CONFIRM = -9;
   public static final int PAD_CORRECT_PAD = -8;
   public static final int PAD_COMFIRM_PAD = -10;
@@ -96,6 +98,9 @@ public class StateMachine {
         case PAD_PRE_2:
           str = "PAD_PRE_2";
           break;
+        case PAD_DETECT_AGE:
+          str = "PAD_DETECT_AGE";
+          break;
         case PAD_COMFIRM_PAD:
           str = "PAD_COMFIRM_PAD";
           break;
@@ -137,7 +142,7 @@ public class StateMachine {
   }
 
   public static String getRespStrByNum(int num){
-    String str = "none";
+    String str = "none" + String.valueOf(num);
     switch (num) {
         case RESP_AGE_DETECT_YES:
           str = "RESP_AGE_DETECT_YES";

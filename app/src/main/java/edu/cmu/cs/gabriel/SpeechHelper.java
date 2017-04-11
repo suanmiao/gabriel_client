@@ -3,20 +3,15 @@ package edu.cmu.cs.gabriel;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
+import android.os.Handler;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
-
-import org.w3c.dom.ProcessingInstruction;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-
-import javax.security.auth.login.LoginException;
-
 import edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field;
 
 import static edu.cmu.cs.gabriel.StateMachine.AED_FOUND;
@@ -26,11 +21,14 @@ import static edu.cmu.cs.gabriel.StateMachine.AED_PLUGIN;
 import static edu.cmu.cs.gabriel.StateMachine.AED_SHOCK;
 
 
+import static edu.cmu.cs.gabriel.StateMachine.PAD_COMFIRM_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_CORRECT_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_DEFIB_CONFIRM;
+import static edu.cmu.cs.gabriel.StateMachine.PAD_DETECT_AGE;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_FINISH;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_LEFT_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_LEFT_PAD_SHOW;
+import static edu.cmu.cs.gabriel.StateMachine.PAD_NONE;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_PEEL_LEFT;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_PEEL_RIGHT;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_PRE_1;
@@ -59,6 +57,7 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
 
   private TextToSpeech tts = null;
   private Context context;
+  private Handler mVoiceInput = null;
   public HashMap<Integer, String> aedStageInstructionMap = new HashMap<Integer, String>();
   public HashMap<Integer, String> padStageInstructionMap = new HashMap<Integer, String>();
   public HashMap<Integer, String> timeoutInstructionMap = new HashMap<Integer, String>();
@@ -70,8 +69,8 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
 
   private MediaPlayer initialPlayer = new MediaPlayer();
   int initialCounter = 0;
-  final List<String> pre2Files = Arrays.asList("instr_2.m4a",
-          "instr_3.m4a","instr_4.m4a","instr_5a.m4a");
+  final List<String> pre2Files = Arrays.asList("New_2.m4a",
+          "New_3.m4a","New_4.m4a");
   int initialStages = pre2Files.size();
 
   public boolean is_finished = true;
@@ -83,24 +82,32 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     this.player = new MediaPlayer();
 
     //audio for user's action
-    padStageInstructionMap.put(PAD_PRE_1,"instr_1.m4a");
-    padStageInstructionMap.put(RESP_START_DETECTION, "instr_5b.m4a");
-    padStageInstructionMap.put(PAD_DEFIB_CONFIRM,"instr_7.m4a");
-    padStageInstructionMap.put(PAD_LEFT_PAD_SHOW,"instr_8.m4a");
-    padStageInstructionMap.put(PAD_PEEL_LEFT,"instr_9.m4a");
-    padStageInstructionMap.put(PAD_LEFT_PAD, "instr_11.m4a");
-    padStageInstructionMap.put(PAD_PEEL_RIGHT,"instr_12.m4a");
-    padStageInstructionMap.put(PAD_WAIT_RIGHT_PAD,"instr_13.m4a");
-    padStageInstructionMap.put(PAD_RIGHT_PAD,"instr_14.m4a");
-    padStageInstructionMap.put(PAD_FINISH,"instr_15.m4a");
+    padStageInstructionMap.put(PAD_PRE_1,"New_1.m4a");
+    padStageInstructionMap.put(PAD_DETECT_AGE, "instr_5b.m4a");
+    //todo
+    //padStageInstructionMap.put(PAD_NONE,"");
+    padStageInstructionMap.put(PAD_NONE,"instr_5a.m4a");
 
-    //Pre-AED instructions common to all groups (adult/child/bulge/nobulge)
-    respInstructionMap.put(RESP_PAD_APPLYING_FINISHED, "instr_16.m4a");
+    padStageInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
+    padStageInstructionMap.put(PAD_DEFIB_CONFIRM,"New_10.m4a");
+    padStageInstructionMap.put(PAD_LEFT_PAD_SHOW,"New_11.m4a");
+    padStageInstructionMap.put(PAD_PEEL_LEFT,"New_12.m4a");
+    padStageInstructionMap.put(PAD_LEFT_PAD, "New_14.m4a");
+
+    padStageInstructionMap.put(PAD_PEEL_RIGHT,"New_15.m4a");
+    padStageInstructionMap.put(PAD_WAIT_RIGHT_PAD,"New_16.m4a");
+
+    padStageInstructionMap.put(PAD_RIGHT_PAD,"New_17.m4a");
+    padStageInstructionMap.put(PAD_FINISH,"New_18.m4a");
+
+    respInstructionMap.put(RESP_PAD_APPLYING_FINISHED, "New_19.m4a");
 
     //instruction for timeout
     timeoutInstructionMap.put(PAD_PRE_1,"instr_1.m4a");
     //TODO ADD TIMEOUT FOR PAD_PRE_2
-    timeoutInstructionMap.put(AED_NONE,"");
+    //todo add for AED_NONE
+    timeoutInstructionMap.put(PAD_NONE,"instr_5a.m4a");
+    timeoutInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
 
     timeoutInstructionMap.put(AED_NONE, "06_no_aed.wav");
     timeoutInstructionMap.put(AED_FOUND, "7.wav");
@@ -183,6 +190,7 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       }
     } else {
       initialPlayer.release();
+      mVoiceInput.sendEmptyMessageDelayed(PAD_PRE_2, 1000);
     }
   }
 
@@ -212,30 +220,43 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     padStageInstructionMap.remove(PAD_CORRECT_PAD);
     fieldInstructionMap.remove(PAD_WRONG_PAD);
     if (isAdult) {
-      fieldInstructionMap.put(PATIENT_IS_ADULT, "instr_5c_adult.m4a");
-      fieldInstructionLen.put(PATIENT_IS_ADULT, 6500);
-      padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_6_blue.m4a");
-      fieldInstructionMap.put(PAD_WRONG_PAD, "instr_6_blue_err.m4a");
+      fieldInstructionMap.put(PATIENT_IS_ADULT, "New_5_adult.m4a");
+//      fieldInstructionMap.put(PATIENT_IS_ADULT, "instr_5c_adult.m4a");
+//      fieldInstructionLen.put(PATIENT_IS_ADULT, 6500);
+      padStageInstructionMap.put(PAD_CORRECT_PAD,"New_8_adult.m4a");
+      timeoutInstructionMap.put(PAD_CORRECT_PAD,"New_8_adult.m4a");
+//      padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_6_blue.m4a");
+//      fieldInstructionMap.put(PAD_WRONG_PAD, "instr_6_blue_err.m4a");
+      fieldInstructionMap.put(PAD_WRONG_PAD, "New_8_adult_err.m4a");
     } else {
-      fieldInstructionMap.put(PATIENT_IS_ADULT, "instr_5c_child.m4a");
-      fieldInstructionLen.put(PATIENT_IS_ADULT, 6500);
-      padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_6_red.m4a");
-      fieldInstructionMap.put(PAD_WRONG_PAD, "instr_6_red_err.m4a");
+      fieldInstructionMap.put(PATIENT_IS_ADULT, "New_5_child.m4a");
+//      fieldInstructionMap.put(PATIENT_IS_ADULT, "instr_5c_child.m4a");
+//      fieldInstructionLen.put(PATIENT_IS_ADULT, 6500);
+      padStageInstructionMap.put(PAD_CORRECT_PAD,"New_8_child.m4a");
+      timeoutInstructionMap.put(PAD_CORRECT_PAD,"New_8_child.m4a");
+      fieldInstructionMap.put(PAD_WRONG_PAD, "New_8_child_err.m4a");
+//      padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_6_red.m4a");
+//      fieldInstructionMap.put(PAD_WRONG_PAD, "instr_6_red_err.m4a");
     }
   }
 
   // Add instructions according to whether the patient has a defibrillator
   public void updateMapDefib(boolean hasDefib) {
     if (hasDefib) {
-      respInstructionMap.put(RESP_DEFIB_YES, "instr_8.m4a");
-      padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "instr_10_bulge.m4a");
-      padStageInstructionLen.put(PAD_WAIT_LEFT_PAD, 15200);
-      fieldInstructionMap.put(PAD_DETECT, "instr_11_err_bulge.m4a");
+      respInstructionMap.put(RESP_DEFIB_YES, "New_11.m4a");
+      padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "New_13_bulge.m4a");
+      fieldInstructionMap.put(PAD_DETECT, "New_14_err_bulge.m4a");
+
+//      respInstructionMap.put(RESP_DEFIB_YES, "instr_8.m4a");
+//      padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "instr_10_bulge.m4a");
+//      padStageInstructionLen.put(PAD_WAIT_LEFT_PAD, 15200);
+//      fieldInstructionMap.put(PAD_DETECT, "instr_11_err_bulge.m4a");
     } else {
-      respInstructionMap.put(RESP_DEFIB_NO, "instr_8.m4a");
-      padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "instr_10_nobulge.m4a");
-      padStageInstructionLen.put(PAD_WAIT_LEFT_PAD, 15200);
-      fieldInstructionMap.put(PAD_DETECT, "instr_11_err_nobulge.m4a");
+      respInstructionMap.put(RESP_DEFIB_NO, "New_11.m4a");
+//      respInstructionMap.put(RESP_DEFIB_NO, "instr_8.m4a");
+      padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "New_13_nobulge.m4a");
+//      padStageInstructionLen.put(PAD_WAIT_LEFT_PAD, 15200);
+      fieldInstructionMap.put(PAD_DETECT, "New_14_err_bulge.m4a");
     }
   }
 
@@ -264,7 +285,10 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       return;
     }
     String assetPath = fieldInstructionMap.get(f);
-    playSound(assetPath);
+    if(f == PATIENT_IS_ADULT)
+      playSound(assetPath,StateMachine.PAD_AGE_CONFIRM);
+    else
+      playSound(assetPath);
   }
 
   public void playInstructionSound(int stage) {
@@ -278,10 +302,11 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     }else{
       return;
     }
-    playSound(assetPath);
+    playSound(assetPath,stage);
   }
 
   public void playStateChangeSound(int stage){
+
     if(stage == PAD_PRE_2){
       playPre2Instructions();
       return;
@@ -290,20 +315,20 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     String assetPath;
     if (padStageInstructionMap.containsKey(stage)) {
       assetPath = padStageInstructionMap.get(stage);
-      Log.e("state audio path",assetPath);
+      Log.e("GabrielClient","pad audio path "+assetPath);
     }else if(aedStageInstructionMap.containsKey(stage)){
       assetPath = aedStageInstructionMap.get(stage);
-      Log.e("pad path",assetPath);
+      Log.e("GabrielClient","aed audio path "+assetPath);
     }else {
       return;
     }
-    playSound(assetPath);
+    playSound(assetPath,stage);
   }
 
   public void playAEDStageInstruction(int stage){
     String assetPath;
     assetPath = aedStageInstructionMap.get(stage);
-    playSound(assetPath);
+    playSound(assetPath,stage);
   }
 
   public void playTimeoutSound(int stage) {
@@ -312,10 +337,48 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     }
     String assetPath = timeoutInstructionMap.get(stage);
     Log.e(TAG,"timeout audio "+assetPath);
-    playSound(assetPath);
+    playSound(assetPath,stage);
   }
 
   private void playSound(String path) {
+    if (!is_finished) {
+      return;
+    }
+    is_finished = false;
+    Log.e("suan play sound", "path " + path);
+    try {
+      if (player != null) {
+        if (player.isPlaying()) {
+          player.stop();
+          is_finished = true;
+        }
+        player.reset();
+        player = new MediaPlayer();
+      }
+
+      AssetFileDescriptor descriptor = context.getAssets().openFd(path);
+      player.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
+              descriptor.getLength());
+      descriptor.close();
+
+
+      player.prepare();
+      player.setVolume(1f, 1f);
+      player.setLooping(false);
+      player.start();
+      player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+        @Override
+        public void onCompletion(MediaPlayer mp) {
+          is_finished = true;
+        }
+      });
+      Log.e("suan play sound", "play start " + path);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  private void playSound(String path, final int stage) {
     if (!is_finished) {
       return;
     }
@@ -345,9 +408,11 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
         @Override
         public void onCompletion(MediaPlayer mp) {
            is_finished = true;
+          Log.e("GabrielClient", "play finished ");
+          mVoiceInput.sendEmptyMessage(stage);
         }
       });
-      Log.e("suan play sound", "play start " + path);
+      Log.e("GabrielClient", "play start " + path);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -422,5 +487,13 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     if (player != null) {
       player.release();
     }
+  }
+
+  public Handler getVoiceInput() {
+    return mVoiceInput;
+  }
+
+  public void setVoiceInput(Handler mVoiceInput) {
+    this.mVoiceInput = mVoiceInput;
   }
 }
