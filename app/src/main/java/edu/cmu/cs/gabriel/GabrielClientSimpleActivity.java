@@ -24,6 +24,7 @@ import com.google.gson.Gson;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
+import org.opencv.android.OpenCVLoader;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -100,6 +101,15 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     public static final String TAG_IS_ADULT = "TAG_IS_ADULT"; //0 ADULT, 1 CHILDREN
     public static final String TAG_IS_DEFIB = "TAG_IS_DEFIB"; //1 yes, -1 no
     ACache mCache;
+
+    static {
+        if (!OpenCVLoader.initDebug()) {
+            // Handle initialization error
+            Log.e("***", "OpenCV didn't work");
+        } else {
+            Log.e("~~~", "OpenCV worked");
+        }
+    }
 
     Handler mHandler = new Handler(){
         @Override
