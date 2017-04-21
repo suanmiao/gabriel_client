@@ -8,13 +8,14 @@ import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.PersistableBundle;
 import android.os.Vibrator;
 import android.speech.RecognizerIntent;
 import android.util.Log;
+import android.util.Size;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -73,6 +74,8 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
 
     private Button mYes;
     private Button mNo;
+    private Button mConsole;
+    private ImageButton mVoiceInputBtn;
     private RelativeLayout mHiddenInfoPanel;
     private TextView mHiddenState;
     private TextView mHiddenTimeout;
@@ -100,6 +103,9 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     public static final String TAG_CURRENT_STAGE = "CURRENT_STAGE";
     public static final String TAG_IS_ADULT = "TAG_IS_ADULT"; //0 ADULT, 1 CHILDREN
     public static final String TAG_IS_DEFIB = "TAG_IS_DEFIB"; //1 yes, -1 no
+    public static final String TAG_INPUT_FAILED= "TAG_INPUT_FAILED"; //1 yes, -1 no
+    public static final String TAG_Voice_Btn_Visible= "TAG_Voice_Btn_Visible"; //1 yes, -1 no
+
     ACache mCache;
 
     static {
@@ -153,8 +159,10 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     is_prompt = true;
                     break;
             }
-            if(is_prompt)
+            if(is_prompt) {
                 promptSpeechInput();
+                mVoiceInputBtn.setVisibility(View.VISIBLE);
+            }
         }
     };
 
@@ -195,11 +203,26 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 stateUserResponse(respYes);
             }
         });
-
         mNo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 stateUserResponse(respNo);
+            }
+        });
+        mVoiceInputBtn = (ImageButton)findViewById(R.id.voice_input_btn);
+        String visible = mCache.getAsString(TAG_Voice_Btn_Visible);
+        if(visible != null && !visible.trim().equals("")){
+            boolean is_visible = Boolean.valueOf(visible);
+            if (is_visible){
+                mVoiceInputBtn.setVisibility(View.VISIBLE);
+            }else{
+                mVoiceInputBtn.setVisibility(View.GONE);
+            }
+        }
+        mVoiceInputBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mHandler.sendEmptyMessage(currentState);
             }
         });
     }
@@ -242,19 +265,26 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        mCache.put(TAG_Voice_Btn_Visible,"true");
+        String counter = mCache.getAsString(TAG_INPUT_FAILED);
         String stage = mCache.getAsString(TAG_CURRENT_STAGE);
         Log.e(TAG,"onActivityResult stage "+stage);
         if(stage != null && !stage.trim().equals("")){
             currentState = Integer.valueOf(stage);
         }
-
+        int voice_failed_counter = 0;
+        if(counter != null && !counter.trim().equals("")){
+            voice_failed_counter = Integer.valueOf(counter);
+        }
         switch (requestCode) {
             case SPEECH_INPUT: {
                 Log.e(TAG, "Got speech data result");
-                if (data != null) {
-                } else {
+                if (data == null) {
                     Log.e(TAG, "No data");
+                    voice_failed_counter += 1;
+                    mCache.put(TAG_INPUT_FAILED,String.valueOf(voice_failed_counter));
                 }
+
                 if (resultCode == RESULT_OK && data != null) {
                     int yerOrNo = 0;
 
@@ -262,10 +292,10 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     for(String input : result){
                         Log.e(TAG,input);
                         input = input.toLowerCase();
-                        if(input.startsWith("yes")){
+                        if(input.equals("yes") || input.startsWith("yes") || input.contains("yes")){
                             yerOrNo = YES;
                             break;
-                        }else if(input.startsWith("no")){
+                        }else if(input.equals("no") || input.startsWith("no") || input.contains("no")){
                             yerOrNo = NO;
                             break;
                         }
@@ -274,16 +304,27 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                         Log.e(TAG, "This YES was received");
                         is_voice_reco_running = false;
                         stateUserResponse(respYes);
+                        voice_failed_counter = 0;
+                        mCache.put(TAG_INPUT_FAILED, String.valueOf(voice_failed_counter));
                     } else if (yerOrNo == -1) {
                         Log.e(TAG, "This NO was received");
                         is_voice_reco_running = false;
                         stateUserResponse(respNo);
+                        voice_failed_counter = 0;
+                        mCache.put(TAG_INPUT_FAILED, String.valueOf(voice_failed_counter));
                     } else {
-                        Log.e(TAG,"No resp was received");
+                        voice_failed_counter += 1;
+                        mCache.put(TAG_INPUT_FAILED, String.valueOf(voice_failed_counter));
+                        Log.e(TAG, "No resp was received");
                         Toast.makeText(getApplicationContext(),"Can't recognize the voice, wait to say it again.",
                                 Toast.LENGTH_SHORT).show();
-                        is_voice_reco_running = false;
-                        mHandler.sendEmptyMessageDelayed(currentState, 5000);
+                        if(voice_failed_counter > 2){
+                            voice_failed_counter = 0;
+                            mCache.put(TAG_INPUT_FAILED,String.valueOf(voice_failed_counter));
+                            is_voice_reco_running = false;
+                            break;
+                        }
+                        mHandler.sendEmptyMessageDelayed(currentState, 1000);
                     }
                 }
                 break;
@@ -347,8 +388,10 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 break;
 
             case StateMachine.PAD_CORRECT_PAD:
-                resp = StateMachine.RESP_PAD_CORRECT_PAD;
-                NetworkProtocol.USER_RESPONSE = resp;
+                if(yesOrNo == respYes) {
+                    resp = StateMachine.RESP_PAD_CORRECT_PAD;
+                    NetworkProtocol.USER_RESPONSE = resp;
+                }
                 break;
 
             case StateMachine.PAD_DEFIB_CONFIRM:
@@ -364,44 +407,54 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     NetworkProtocol.USER_RESPONSE = resp;
                 }
                 instr = StateMachine.PAD_DEFIB_CONFIRM;
-                speechHelper.playInstructionSound(instr);
+//                speechHelper.playInstructionSound(instr);
                 break;
 
             case StateMachine.PAD_PEEL_LEFT:
                 // TORESOLVE
-                resp = StateMachine.RESP_PEEL_PAD_LEFT; // There is no mapping for this instruction
-                NetworkProtocol.USER_RESPONSE = resp;
-                instr = StateMachine.PAD_PEEL_LEFT;
-                speechHelper.playInstructionSound(instr);
+                if(yesOrNo == respYes) {
+                    resp = StateMachine.RESP_PEEL_PAD_LEFT; // There is no mapping for this instruction
+                    NetworkProtocol.USER_RESPONSE = resp;
+//                    instr = StateMachine.PAD_PEEL_LEFT;
+                }
+//                speechHelper.playInstructionSound(instr);
                 break;
 
             case StateMachine.PAD_WAIT_LEFT_PAD:
                 //TORESOLVE
-                resp = StateMachine.RESP_LEFT_PAD_FINISHED; // There is no mapping for this instruction
-                NetworkProtocol.USER_RESPONSE = resp;
-                instr = StateMachine.PAD_WAIT_LEFT_PAD;
-                speechHelper.playInstructionSound(instr);
+                if(yesOrNo == respYes) {
+                    resp = StateMachine.RESP_LEFT_PAD_FINISHED; // There is no mapping for this instruction
+                    NetworkProtocol.USER_RESPONSE = resp;
+//                    instr = StateMachine.PAD_WAIT_LEFT_PAD;
+                }
+//                speechHelper.playInstructionSound(instr);
                 break;
 
             case StateMachine.PAD_PEEL_RIGHT:
                 //TORESOLVE
-                NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_RIGHT; // There is no mapping for this instruction
-                resp = StateMachine.RESP_PEEL_PAD_RIGHT;
-                instr = StateMachine.PAD_PEEL_RIGHT;
-                speechHelper.playInstructionSound(instr);
+                if(yesOrNo == respYes) {
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PEEL_PAD_RIGHT; // There is no mapping for this instruction
+                    resp = StateMachine.RESP_PEEL_PAD_RIGHT;
+                    instr = StateMachine.PAD_PEEL_RIGHT;
+                }
+//                speechHelper.playInstructionSound(instr);
                 break;
 
             case StateMachine.PAD_WAIT_RIGHT_PAD:
-                NetworkProtocol.USER_RESPONSE = StateMachine.RESP_RIGHT_PAD_FINISHED;
-                resp = StateMachine.RESP_RIGHT_PAD_FINISHED;
-                speechHelper.playInstructionSound(resp);
+                if(yesOrNo == respYes) {
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_RIGHT_PAD_FINISHED;
+                    resp = StateMachine.RESP_RIGHT_PAD_FINISHED;
+                }
+//                speechHelper.playInstructionSound(resp);
                 break;
 
             case StateMachine.PAD_FINISH:
-                NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PAD_APPLYING_FINISHED;
-                resp = StateMachine.RESP_PAD_APPLYING_FINISHED;
-                instr = StateMachine.PAD_FINISH;
-                speechHelper.playInstructionSound(instr);
+                if(yesOrNo == respYes) {
+                    NetworkProtocol.USER_RESPONSE = StateMachine.RESP_PAD_APPLYING_FINISHED;
+                    resp = StateMachine.RESP_PAD_APPLYING_FINISHED;
+                    instr = StateMachine.PAD_FINISH;
+                }
+//                speechHelper.playInstructionSound(instr);
                 break;
         }
         Log.e(TAG,"resp = "+resp);
@@ -422,17 +475,22 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
             String modelResp;
             switch (field) {
                 case AED_STATE:
+                    mVoiceInputBtn.setVisibility(View.GONE);
                     currentState = model.aed_state;
                     Log.e(TAG,"currentState "+currentState);
                     mCache.put(TAG_CURRENT_STAGE, String.valueOf(currentState));
+                    mCache.put(TAG_Voice_Btn_Visible,String.valueOf("false"));
                     restoreSavedState();
                     mHiddenState.setText(String.valueOf(StateMachine.getStateStrByNum(currentState)));
                     speechHelper.playStateChangeSound(currentState);
-                break;
+                    break;
                 case TIMEOUT_STATE:
                     Log.e(TAG,"timeout_state "+currentState);
                     if(!is_voice_reco_running)
                         speechHelper.playTimeoutSound(currentState);
+                    else {
+                        Log.e(TAG,"is_voice_reco_running ");
+                    }
                 break;
                 case FRAME_AED:
                     isAEDFind = model.frame_aed;
@@ -469,16 +527,16 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                         // TODO: Update resp with actual values
                         int resp_1 = model.pad_detect[0];
                         int resp_2 = model.pad_detect[1];
-                        if (resp_1 == 1) {
+                        if (resp_1 == 1 || resp_2 == 1) {
                             speechHelper.playLeftWrongPlacementSound();
                         }
-                        if (resp_2 == 1) {
-                            speechHelper.playLeftWrongViewSound();
-                        }
-                        // TODO: is this the case for correct placement?
-                        if (resp_1 == 0 && resp_2 == 0) {
-                            speechHelper.playInstructionSound(StateMachine.PAD_CORRECT_PAD);
-                        }
+//                        if (resp_2 == 1) {
+//                            speechHelper.playLeftWrongViewSound();
+//                        }
+//                        // TODO: is this the case for correct placement?
+//                        if (resp_1 == 0 && resp_2 == 0) {
+//                            speechHelper.playInstructionSound(StateMachine.PAD_CORRECT_PAD);
+//                        }
                     }
                     if(model.aed_state == StateMachine.PAD_RIGHT_PAD) {
                         Log.e("suan", "PAD_RIGHT_PAD" + model.aed_state);
@@ -487,12 +545,12 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                         // TODO: Update resp with actual values
                         int resp_1 = model.pad_detect[0];
                         int resp_2 = model.pad_detect[1];
-                        if (resp_1 == 1) {
+                        if (resp_1 == 1 || resp_2 == 1) {
                             speechHelper.playRightWrongPlacementSound();
                         }
-                        if (resp_2 == 1) {
-                            speechHelper.playRightWrongViewSound();
-                        }
+//                        if (resp_2 == 1) {
+//                            speechHelper.playRightWrongViewSound();
+//                        }
                     }
                     break;
                 case PAD_WRONG_LEFT:
@@ -619,6 +677,9 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         public void onPreviewFrame(byte[] frame, Camera mCamera) {
             if (isRunning) {
                 Camera.Parameters parameters = mCamera.getParameters();
+                int width = parameters.getPictureSize().width;
+                int height = parameters.getPictureSize().height;
+                Log.e(TAG,width+" "+height);
                 if (videoStreamingThread != null) {
                     videoStreamingThread.push(frame, parameters);
                 }

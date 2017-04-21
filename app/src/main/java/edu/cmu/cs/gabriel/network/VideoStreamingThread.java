@@ -165,7 +165,7 @@ public class VideoStreamingThread extends Thread {
       ByteArrayOutputStream tmpBuffer = new ByteArrayOutputStream();
       // chooses quality 67 and it roughly matches quality 5 in avconv
       //image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 67, tmpBuffer);
-      image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 67, tmpBuffer);
+      image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 80, tmpBuffer);
       this.frameBuffer = tmpBuffer.toByteArray();
       this.frameID++;
       frameLock.notify();

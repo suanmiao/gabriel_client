@@ -245,7 +245,7 @@ public class StateMachine {
     public List<Float> frame_orange_flash_box;
 
     public boolean frame_joints = false;
-//    public List<List<Float>> joints;
+    public List<List<Float>> joints;
 
     public int pad_adult = -1;
     public boolean pad_wrong_pad = false;

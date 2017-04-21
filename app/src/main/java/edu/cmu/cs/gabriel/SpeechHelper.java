@@ -38,19 +38,18 @@ import static edu.cmu.cs.gabriel.StateMachine.PAD_WAIT_LEFT_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.PAD_WAIT_RIGHT_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.RESP_DEFIB_NO;
 import static edu.cmu.cs.gabriel.StateMachine.RESP_PAD_APPLYING_FINISHED;
-import static edu.cmu.cs.gabriel.StateMachine.RESP_START_DETECTION;
 import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_DETECT;
 import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PATIENT_IS_ADULT;
 import static edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field.PAD_WRONG_PAD;
 import static edu.cmu.cs.gabriel.StateMachine.RESP_DEFIB_YES;
 import static edu.cmu.cs.gabriel.StateMachine.TAG;
-import static edu.cmu.cs.gabriel.StateMachine.TIMEOUT_NONE;
 
 /**
  * Created by suanmiao on 23/11/2016.
  */
 
 public class SpeechHelper implements TextToSpeech.OnInitListener {
+
   private static final String LOG_TAG = "Speech";
 
   private MediaPlayer player;
@@ -84,9 +83,8 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     //audio for user's action
     padStageInstructionMap.put(PAD_PRE_1,"New_1.m4a");
     padStageInstructionMap.put(PAD_DETECT_AGE, "instr_5b.m4a");
-    //todo
-    //padStageInstructionMap.put(PAD_NONE,"");
-    padStageInstructionMap.put(PAD_NONE,"instr_5a.m4a");
+
+    padStageInstructionMap.put(PAD_NONE,"New_6.m4a");
 
     padStageInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
     padStageInstructionMap.put(PAD_DEFIB_CONFIRM,"New_10.m4a");
@@ -99,21 +97,37 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
 
     padStageInstructionMap.put(PAD_RIGHT_PAD,"New_17.m4a");
     padStageInstructionMap.put(PAD_FINISH,"New_18.m4a");
+    padStageInstructionMap.put(AED_NONE,"New_19.m4a");
+
+    aedStageInstructionMap.put(AED_PLUGIN, "04_wait_further.wav");
 
     respInstructionMap.put(RESP_PAD_APPLYING_FINISHED, "New_19.m4a");
 
     //instruction for timeout
     timeoutInstructionMap.put(PAD_PRE_1,"instr_1.m4a");
-    //TODO ADD TIMEOUT FOR PAD_PRE_2
-    //todo add for AED_NONE
-    timeoutInstructionMap.put(PAD_NONE,"instr_5a.m4a");
-    timeoutInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
+    timeoutInstructionMap.put(PAD_PRE_2,"New_4_timeout.m4a");
 
-    timeoutInstructionMap.put(AED_NONE, "06_no_aed.wav");
-    timeoutInstructionMap.put(AED_FOUND, "7.wav");
-    timeoutInstructionMap.put(AED_ON, "07_no_plug.wav");
-    timeoutInstructionMap.put(AED_PLUGIN, "08_no_shock.wav");
-    timeoutInstructionMap.put(AED_SHOCK, "10.wav");
+    timeoutInstructionMap.put(PAD_NONE,"New_6.m4a");
+    //correct pad added
+    timeoutInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
+    timeoutInstructionMap.put(PAD_DEFIB_CONFIRM,"New_10.m4a");
+    timeoutInstructionMap.put(PAD_LEFT_PAD_SHOW,"New_11.m4a");
+    timeoutInstructionMap.put(PAD_PEEL_LEFT,"New_12.m4a");
+    timeoutInstructionMap.put(PAD_LEFT_PAD, "New_14.m4a");
+
+    timeoutInstructionMap.put(PAD_PEEL_RIGHT,"New_15.m4a");
+    timeoutInstructionMap.put(PAD_WAIT_RIGHT_PAD,"New_16.m4a");
+
+    timeoutInstructionMap.put(PAD_RIGHT_PAD,"New_17.m4a");
+    timeoutInstructionMap.put(PAD_FINISH,"New_18.m4a");
+    timeoutInstructionMap.put(AED_NONE,"New_19.m4a");
+
+    timeoutInstructionMap.put(AED_FOUND, "06_no_aed.wav");
+//    timeoutInstructionMap.put(AED_FOUND, "7.wav");
+//    timeoutInstructionMap.put(AED_ON, "07_no_plug.wav");
+//    timeoutInstructionMap.put(AED_PLUGIN, "08_no_shock.wav");
+//    timeoutInstructionMap.put(AED_SHOCK, "10.wav");
+//    timeoutInstructionMap.put(AED_PLUGIN,"04_wait_further.wav");
 
     padStageInstructionLen.put(PAD_DEFIB_CONFIRM, 9500);
     padStageInstructionLen.put(PAD_PEEL_LEFT, 6500);
@@ -311,7 +325,6 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       playPre2Instructions();
       return;
     }
-
     String assetPath;
     if (padStageInstructionMap.containsKey(stage)) {
       assetPath = padStageInstructionMap.get(stage);
@@ -341,10 +354,10 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
   }
 
   private void playSound(String path) {
-    if (!is_finished) {
-      return;
-    }
-    is_finished = false;
+//    if (!is_finished) {
+//      return;
+//    }
+//    is_finished = false;
     Log.e("suan play sound", "path " + path);
     try {
       if (player != null) {
@@ -367,6 +380,7 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       player.setLooping(false);
       player.start();
       player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+
         @Override
         public void onCompletion(MediaPlayer mp) {
           is_finished = true;
@@ -379,24 +393,32 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
   }
 
   private void playSound(String path, final int stage) {
-    if (!is_finished) {
-      return;
-    }
+    Log.e("GabrielClient", "playSound");
+//    if (!is_finished) {
+//      return;
+//    }
     is_finished = false;
-    Log.e("suan play sound", "path " + path);
+    Log.e("GabrielClient", "path " + path);
     try {
-      if (player != null) {
-        if (player.isPlaying()) {
-          player.stop();
-          is_finished = true;
+        if (player != null) {
+          Log.e("GabrielClient", "1 ");
+//          if (player.isPlaying()) {
+//            Log.e("GabrielClient", "2 ");
+//            player.stop();
+//            is_finished = true;
+//          }
+          Log.e("GabrielClient", "3 ");
+//          player.reset();
+          Log.e("GabrielClient", "4 ");
         }
-        player.reset();
-        player = new MediaPlayer();
-      }
+      Log.e("GabrielClient", "5 ");
+      player = new MediaPlayer();
+      Log.e("GabrielClient", "6 ");
 
       AssetFileDescriptor descriptor = context.getAssets().openFd(path);
+      Log.e("GabrielClient","length == "+descriptor.getLength());
       player.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
-          descriptor.getLength());
+              descriptor.getLength());
       descriptor.close();
 
 
@@ -404,14 +426,16 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       player.setVolume(1f, 1f);
       player.setLooping(false);
       player.start();
+      Log.e("GabrielClient", "player start ");
       player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
         @Override
         public void onCompletion(MediaPlayer mp) {
            is_finished = true;
-          Log.e("GabrielClient", "play finished ");
-          mVoiceInput.sendEmptyMessage(stage);
+           Log.e("GabrielClient", "play finished ");
+           mVoiceInput.sendEmptyMessage(stage);
         }
       });
+
       Log.e("GabrielClient", "play start " + path);
     } catch (Exception e) {
       e.printStackTrace();
