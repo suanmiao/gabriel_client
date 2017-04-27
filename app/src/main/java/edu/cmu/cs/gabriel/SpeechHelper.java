@@ -12,6 +12,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
+
 import edu.cmu.cs.gabriel.StateMachine.StateUpdateEvent.Field;
 
 import static edu.cmu.cs.gabriel.StateMachine.AED_FOUND;
@@ -69,7 +71,7 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
   private MediaPlayer initialPlayer = new MediaPlayer();
   int initialCounter = 0;
   final List<String> pre2Files = Arrays.asList("New_2.m4a",
-          "New_3.m4a","New_4.m4a");
+          "New_3.m4a", "New_4.m4a");
   int initialStages = pre2Files.size();
 
   public boolean is_finished = true;
@@ -86,16 +88,21 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
 
     padStageInstructionMap.put(PAD_NONE,"New_6.m4a");
 
-    padStageInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
-    padStageInstructionMap.put(PAD_DEFIB_CONFIRM,"New_10.m4a");
+//    padStageInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
+    padStageInstructionMap.put(PAD_COMFIRM_PAD,"Modify_9.m4a");
+//    padStageInstructionMap.put(PAD_DEFIB_CONFIRM,"New_10.m4a");
+    padStageInstructionMap.put(PAD_DEFIB_CONFIRM,"Modify_10.m4a");
     padStageInstructionMap.put(PAD_LEFT_PAD_SHOW,"New_11.m4a");
     padStageInstructionMap.put(PAD_PEEL_LEFT,"New_12.m4a");
-    padStageInstructionMap.put(PAD_LEFT_PAD, "New_14.m4a");
+//    padStageInstructionMap.put(PAD_LEFT_PAD, "New_14.m4a");
+    padStageInstructionMap.put(PAD_LEFT_PAD, "Modify_14.m4a");
 
     padStageInstructionMap.put(PAD_PEEL_RIGHT,"New_15.m4a");
     padStageInstructionMap.put(PAD_WAIT_RIGHT_PAD,"New_16.m4a");
 
-    padStageInstructionMap.put(PAD_RIGHT_PAD,"New_17.m4a");
+//    padStageInstructionMap.put(PAD_RIGHT_PAD,"New_17.m4a");
+    padStageInstructionMap.put(PAD_RIGHT_PAD,"Modify_17.m4a");
+
     padStageInstructionMap.put(PAD_FINISH,"New_18.m4a");
     padStageInstructionMap.put(AED_NONE,"New_19.m4a");
 
@@ -109,11 +116,16 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
 
     timeoutInstructionMap.put(PAD_NONE,"New_6.m4a");
     //correct pad added
-    timeoutInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
-    timeoutInstructionMap.put(PAD_DEFIB_CONFIRM,"New_10.m4a");
+    timeoutInstructionMap.put(PAD_COMFIRM_PAD,"Modify_9.m4a");
+//    timeoutInstructionMap.put(PAD_COMFIRM_PAD,"New_9.m4a");
+//    timeoutInstructionMap.put(PAD_DEFIB_CONFIRM,"New_10.m4a");
+    timeoutInstructionMap.put(PAD_DEFIB_CONFIRM,"Modify_10.m4a");
     timeoutInstructionMap.put(PAD_LEFT_PAD_SHOW,"New_11.m4a");
-    timeoutInstructionMap.put(PAD_PEEL_LEFT,"New_12.m4a");
-    timeoutInstructionMap.put(PAD_LEFT_PAD, "New_14.m4a");
+//    timeoutInstructionMap.put(PAD_PEEL_LEFT,"New_12.m4a");
+    timeoutInstructionMap.put(PAD_PEEL_LEFT,"Modify_12.m4a");
+    timeoutInstructionMap.put(PAD_LEFT_PAD, "Modify_14.m4a");
+
+//    timeoutInstructionMap.put(PAD_LEFT_PAD, "New_14.m4a");
 
     timeoutInstructionMap.put(PAD_PEEL_RIGHT,"New_15.m4a");
     timeoutInstructionMap.put(PAD_WAIT_RIGHT_PAD,"New_16.m4a");
@@ -133,9 +145,42 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     padStageInstructionLen.put(PAD_PEEL_LEFT, 6500);
     padStageInstructionLen.put(PAD_PEEL_RIGHT, 9500);
     padStageInstructionLen.put(PAD_FINISH, 10500);
+  }
 
-    Log.e("###", "Setting up");
+  Random rnd = null;
+  private boolean playOKInstructionRandomly(final String assetPath,final int stage){
 
+    if(rnd == null){
+      rnd = new Random();
+      rnd.setSeed(System.currentTimeMillis());
+    }
+    int num = rnd.nextInt();
+    Log.e(LOG_TAG,"test num: "+String.valueOf(num));
+    if(num % 2 == 0){
+      return false;
+    }
+    try {
+      player = new MediaPlayer();
+      AssetFileDescriptor descriptor = context.getAssets().openFd("Ok.m4a");
+      Log.e("GabrielClient", "length == " + descriptor.getLength());
+      player.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(),
+              descriptor.getLength());
+      descriptor.close();
+      player.prepare();
+      player.setVolume(1f, 1f);
+      player.setLooping(false);
+      player.start();
+      player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+        @Override
+        public void onCompletion(MediaPlayer mp) {
+          is_finished = true;
+          playSound(assetPath, stage);
+        }
+      });
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return true;
   }
 
   /*
@@ -235,22 +280,14 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     fieldInstructionMap.remove(PAD_WRONG_PAD);
     if (isAdult) {
       fieldInstructionMap.put(PATIENT_IS_ADULT, "New_5_adult.m4a");
-//      fieldInstructionMap.put(PATIENT_IS_ADULT, "instr_5c_adult.m4a");
-//      fieldInstructionLen.put(PATIENT_IS_ADULT, 6500);
       padStageInstructionMap.put(PAD_CORRECT_PAD,"New_8_adult.m4a");
       timeoutInstructionMap.put(PAD_CORRECT_PAD,"New_8_adult.m4a");
-//      padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_6_blue.m4a");
-//      fieldInstructionMap.put(PAD_WRONG_PAD, "instr_6_blue_err.m4a");
       fieldInstructionMap.put(PAD_WRONG_PAD, "New_8_adult_err.m4a");
     } else {
       fieldInstructionMap.put(PATIENT_IS_ADULT, "New_5_child.m4a");
-//      fieldInstructionMap.put(PATIENT_IS_ADULT, "instr_5c_child.m4a");
-//      fieldInstructionLen.put(PATIENT_IS_ADULT, 6500);
       padStageInstructionMap.put(PAD_CORRECT_PAD,"New_8_child.m4a");
       timeoutInstructionMap.put(PAD_CORRECT_PAD,"New_8_child.m4a");
       fieldInstructionMap.put(PAD_WRONG_PAD, "New_8_child_err.m4a");
-//      padStageInstructionMap.put(PAD_CORRECT_PAD,"instr_6_red.m4a");
-//      fieldInstructionMap.put(PAD_WRONG_PAD, "instr_6_red_err.m4a");
     }
   }
 
@@ -260,17 +297,10 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
       respInstructionMap.put(RESP_DEFIB_YES, "New_11.m4a");
       padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "New_13_bulge.m4a");
       fieldInstructionMap.put(PAD_DETECT, "New_14_err_bulge.m4a");
-
-//      respInstructionMap.put(RESP_DEFIB_YES, "instr_8.m4a");
-//      padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "instr_10_bulge.m4a");
-//      padStageInstructionLen.put(PAD_WAIT_LEFT_PAD, 15200);
-//      fieldInstructionMap.put(PAD_DETECT, "instr_11_err_bulge.m4a");
     } else {
       respInstructionMap.put(RESP_DEFIB_NO, "New_11.m4a");
-//      respInstructionMap.put(RESP_DEFIB_NO, "instr_8.m4a");
       padStageInstructionMap.put(PAD_WAIT_LEFT_PAD, "New_13_nobulge.m4a");
-//      padStageInstructionLen.put(PAD_WAIT_LEFT_PAD, 15200);
-      fieldInstructionMap.put(PAD_DETECT, "New_14_err_bulge.m4a");
+      fieldInstructionMap.put(PAD_DETECT, "New_14_err_nobulge.m4a");
     }
   }
 
@@ -316,7 +346,8 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     }else{
       return;
     }
-    playSound(assetPath,stage);
+    if(!playOKInstructionRandomly(assetPath,stage))
+      playSound(assetPath,stage);
   }
 
   public void playStateChangeSound(int stage){
@@ -335,7 +366,13 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     }else {
       return;
     }
-    playSound(assetPath,stage);
+    if(stage == PAD_PRE_1){
+      playSound(assetPath, stage);
+    }else {
+      if (!playOKInstructionRandomly(assetPath, stage)) {
+        playSound(assetPath, stage);
+      }
+    }
   }
 
   public void playAEDStageInstruction(int stage){
@@ -401,19 +438,14 @@ public class SpeechHelper implements TextToSpeech.OnInitListener {
     Log.e("GabrielClient", "path " + path);
     try {
         if (player != null) {
-          Log.e("GabrielClient", "1 ");
 //          if (player.isPlaying()) {
 //            Log.e("GabrielClient", "2 ");
 //            player.stop();
 //            is_finished = true;
 //          }
-          Log.e("GabrielClient", "3 ");
 //          player.reset();
-          Log.e("GabrielClient", "4 ");
         }
-      Log.e("GabrielClient", "5 ");
       player = new MediaPlayer();
-      Log.e("GabrielClient", "6 ");
 
       AssetFileDescriptor descriptor = context.getAssets().openFd(path);
       Log.e("GabrielClient","length == "+descriptor.getLength());
