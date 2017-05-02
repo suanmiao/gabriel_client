@@ -59,6 +59,10 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     }
   }
 
+  public void close2(){
+    mCamera.stopPreview();
+  }
+
   @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     // TODO Auto-generated method stub
     super.onMeasure(widthMeasureSpec, heightMeasureSpec);

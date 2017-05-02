@@ -49,7 +49,7 @@ import edu.cmu.cs.gabriel.token.TokenController;
  */
 public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
 
-    private static final String LOG_TAG = "GabrielClient";
+    private static final String LOG_TAG = "Speech";
 
     // major components for streaming sensor data and receiving information
     private VideoStreamingThread videoStreamingThread = null;
@@ -74,6 +74,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     private Button mNo;
     private Button mConsole;
     private ImageButton mVoiceInputBtn;
+    private ImageButton mRepeatBtn;
     private ImageView mBodyFrame;
     private ImageView mFaceFrame;
     private RelativeLayout mHiddenInfoPanel;
@@ -190,6 +191,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         mHiddenPatientAdult = (TextView)findViewById(R.id.hidden_patient_adult);
         mHiddenWrongLeftPad = (TextView)findViewById(R.id.hidden_pad_wrong_left);
         mAEDBoxState = (TextView)findViewById(R.id.hidden_frame_objects);
+        mRepeatBtn = (ImageButton)findViewById(R.id.repeat_btn);
         mJoints = (TextView)findViewById(R.id.hidden_pad_joints);
         mYes = (Button) findViewById(R.id.main_yes);
         mNo = (Button)findViewById(R.id.main_no);
@@ -229,6 +231,13 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 mHandler.sendEmptyMessage(currentState);
             }
         });
+        mRepeatBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                speechHelper.playStateChangeSound(currentState);
+
+            }
+        });
     }
 
     /**
@@ -250,11 +259,13 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     private void restoreSavedState(){
         String is_adult = mCache.getAsString(TAG_IS_ADULT);
         String is_defib = mCache.getAsString(TAG_IS_DEFIB);
+        Log.e(LOG_TAG,"is_adult "+is_adult);
         if(is_adult != null && is_adult.equals("0")){
             speechHelper.updateMapAdult(true);
         }else if(is_adult != null && is_adult.equals("1")){
             speechHelper.updateMapAdult(false);
         }
+        Log.e(LOG_TAG,"is_defib "+is_defib);
         if(is_defib != null && is_defib.equals("1")){
             speechHelper.updateMapDefib(true);
         }else if(is_defib != null && is_defib.equals("-1")){
@@ -296,7 +307,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     for(String input : result){
                         Log.e(LOG_TAG,input);
                         input = input.toLowerCase();
-                        if(input.equals("yes") || input.startsWith("yes") || input.contains("yes")){
+                        if(input.equals("yes") || input.startsWith("yes") || input.contains("yes") || input.contains("done")){
                             yerOrNo = YES;
                             break;
                         }else if(input.equals("no") || input.startsWith("no") || input.contains("no")){
@@ -387,6 +398,14 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                 }else if(yesOrNo == respNo){
                     resp = StateMachine.RESP_AGE_DETECT_NO;
                     NetworkProtocol.USER_RESPONSE = resp;
+                    String is_adult = mCache.getAsString(TAG_IS_ADULT);
+                    //reverse the result
+                    Log.e(LOG_TAG,"is_adult "+is_adult);
+                    if(is_adult != null && is_adult.equals("0")){
+                        speechHelper.updateMapAdult(false);
+                    }else if(is_adult != null && is_adult.equals("1")){
+                        speechHelper.updateMapAdult(true);
+                    }
                     Log.e("###", "Responding NO to server");
                 }
                 break;
@@ -486,7 +505,9 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     mCache.put(TAG_Voice_Btn_Visible, String.valueOf("false"));
                     restoreSavedState();
                     mHiddenState.setText(String.valueOf(StateMachine.getStateStrByNum(currentState)));
+                    Log.e(LOG_TAG,"playStateChangeSound start");
                     speechHelper.playStateChangeSound(currentState);
+                    Log.e(LOG_TAG,"playStateChangeSound end");
                     if(currentState == StateMachine.PAD_LEFT_PAD || currentState == StateMachine.PAD_RIGHT_PAD){
                         mBodyFrame.setVisibility(View.VISIBLE);
                     }else{
@@ -500,11 +521,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                     break;
                 case TIMEOUT_STATE:
                     Log.e(LOG_TAG,"timeout_state "+currentState);
-//                    if(!is_voice_reco_running)
                         speechHelper.playTimeoutSound(currentState);
-//                    else {
-//                        Log.e(LOG_TAG,"is_voice_reco_running ");
-//                    }
                 break;
                 case FRAME_AED:
                     isAEDFind = model.frame_aed;
@@ -544,13 +561,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                         if (resp_1 == 1 || resp_2 == 1) {
                             speechHelper.playLeftWrongPlacementSound();
                         }
-//                        if (resp_2 == 1) {
-//                            speechHelper.playLeftWrongViewSound();
-//                        }
-//                        // TODO: is this the case for correct placement?
-//                        if (resp_1 == 0 && resp_2 == 0) {
-//                            speechHelper.playInstructionSound(StateMachine.PAD_CORRECT_PAD);
-//                        }
                     }
                     if(model.aed_state == StateMachine.PAD_RIGHT_PAD) {
                         Log.e("suan", "PAD_RIGHT_PAD" + model.aed_state);
@@ -562,9 +572,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                         if (resp_1 == 1 || resp_2 == 1) {
                             speechHelper.playRightWrongPlacementSound();
                         }
-//                        if (resp_2 == 1) {
-//                            speechHelper.playRightWrongViewSound();
-//                        }
                     }
                     break;
                 case PAD_WRONG_LEFT:
@@ -590,7 +597,6 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
                             mCache.put(TAG_IS_ADULT, "1");
                         }
                         Log.e(LOG_TAG,"PATIENT_IS_ADULT1 "+model.patient_is_adult);
-//                        mHandler.postDelayed(mRunner, speechHelper.getInstrLen(field));
                     }else if(model.aed_state == StateMachine.PAD_NONE){
                         //means
                         modelResp = String.valueOf(model.patient_is_adult);
@@ -636,12 +642,12 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         if (preview != null) {
             preview.setPreviewCallback(null);
             preview.close();
             preview = null;
         }
+        super.onDestroy();
     }
 
     /**
