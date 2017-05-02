@@ -187,6 +187,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
 
         //Example of how to use visualHelper
         visualHelper = new VisualHelper(this);
+        visualHelper.setVisibility(true, true, false, false); // set visibility of outlines
         Bitmap bmpImg = BitmapFactory.decodeResource(getResources(),
                 R.drawable.frame_100);
         Bitmap bmp = visualHelper.greenWrapper(bmpImg); // WORK IN PROGRESS; still intregrating
