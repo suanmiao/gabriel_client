@@ -32,7 +32,24 @@ public class VisualHelper {
     private double axisEpsilon, greenEpsilon, minGreenArea;
     private double minAedArea;
     private double maxOrangeArea, minOrangeArea, orangeEpsilon;
-    private boolean showAed = false, showGreen = false, showOrange = false, showConn = false;
+    private boolean showAed = true, showGreen = true, showOrange = false, showConn = false;
+
+    // CV parameters
+    private Scalar green = new Scalar(0, 255, 0);
+    private Scalar black = new Scalar(0, 0, 0);
+    private Scalar blue = new Scalar(255, 0, 0);
+    private Scalar white = new Scalar(255, 255, 255);
+    private Scalar aedLower = new Scalar(80, 170, 120);
+    private Scalar aedUpper = new Scalar(200, 255,250);
+    private Size aedBlur = new Size(17,17);
+    private Scalar connLower = new Scalar(10, 0, 150);
+    private Scalar connUpper = new Scalar(70, 40, 240);
+    private Size connBlur = new Size(9,9);
+    private Scalar orangeLower = new Scalar(0, 80, 190);
+    private Scalar orangeUpper = new Scalar(100, 150, 230);
+    private Size orangeBlur = new Size(19,19);
+    private Scalar greenLower = new Scalar(4, 35, 77);
+    private Scalar greenUpper = new Scalar(100, 100, 200);
 
     private Rect defaultRect = new Rect(0,0,0,0);
     private RotatedRect defaultRotatedRect = new RotatedRect(new Point(0,0), new Size(0,0), (double) 0);
@@ -82,18 +99,21 @@ public class VisualHelper {
         setupEpsilons(w, h);
         Mat blur1 = new Mat(h, w, CvType.CV_8UC1);
         Utils.bitmapToMat(original, blur1);
-        Mat blur2 = blur1.clone();
         // Preprocess image
-        Imgproc.blur(blur1, blur1, new Size(17,17));
+        Imgproc.blur(blur1, blur1, aedBlur);
         Imgproc.cvtColor(blur1, blur1, Imgproc.COLOR_RGB2HSV);
         // Find red section of AED
         Rect aedRect = findAed(blur1);
         if (aedRect == this.defaultRect) {
             return original;
         }
+        Mat blur2 = blur1.clone();
+        /* Comment out because using aedBlur params results in slight less accurate detection but
+         * faster processing speed
         // Preprocess image
-        Imgproc.blur(blur2, blur2, new Size(19,19));
+        Imgproc.blur(blur2, blur2, orangeBlur);
         Imgproc.cvtColor(blur2, blur2, Imgproc.COLOR_RGB2HSV);
+        */
         // Find orange button in AED
         RotatedRect orangeBtn = findOrangeButton(blur2, aedRect);
         if (orangeBtn == this.defaultRotatedRect) {
@@ -106,7 +126,7 @@ public class VisualHelper {
             Utils.bitmapToMat(original, altMat);
             Imgproc.rectangle(altMat, new Point(aedRect.x, aedRect.y),
                     new Point(aedRect.width+aedRect.x, aedRect.height+aedRect.y),
-                    new Scalar(255, 255, 255), 2);
+                    white, 2);
             Utils.matToBitmap(altMat, altBmp);
             original = altBmp;
         }
@@ -115,7 +135,7 @@ public class VisualHelper {
             altMat = new Mat(h, w, CvType.CV_8UC1);
             altBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             Utils.bitmapToMat(original, altMat);
-            Imgproc.ellipse(altMat, orangeBtn, new Scalar(0,255,0), 2);
+            Imgproc.ellipse(altMat, orangeBtn, black, 2);
             Utils.matToBitmap(altMat, altBmp);
             original = altBmp;
         }
@@ -131,7 +151,7 @@ public class VisualHelper {
         Mat img = new Mat(h, w, CvType.CV_8UC1);
         Utils.bitmapToMat(original, img);
         // Preprocess image
-        Imgproc.blur(img, img, new Size(17,17));
+        Imgproc.blur(img, img, aedBlur);
         Imgproc.cvtColor(img, img, Imgproc.COLOR_RGB2HSV);
         // Find red section of AED
         Rect aedRect = findAed(img);
@@ -139,8 +159,8 @@ public class VisualHelper {
             return original;
         }
         // Find green button in AED
-        RotatedRect greenBtn = findGreenButton(img, aedRect);
-        if (greenBtn == this.defaultRotatedRect) {
+        Rect greenBtn = findGreenButton(img, aedRect);
+        if (greenBtn == this.defaultRect) {
             return original;
         }
         // If showAed, then draw the AED's bounding box
@@ -150,7 +170,7 @@ public class VisualHelper {
             Utils.bitmapToMat(original, altMat);
             Imgproc.rectangle(altMat, new Point(aedRect.x, aedRect.y),
                     new Point(aedRect.width+aedRect.x, aedRect.height+aedRect.y),
-                    new Scalar(255, 255, 255), 2);
+                    white, 2);
             Utils.matToBitmap(altMat, altBmp);
             original = altBmp;
         }
@@ -159,7 +179,9 @@ public class VisualHelper {
             altMat = new Mat(h, w, CvType.CV_8UC1);
             altBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             Utils.bitmapToMat(original, altMat);
-            Imgproc.ellipse(altMat, greenBtn, new Scalar(0,255,0), 2);
+            Imgproc.rectangle(altMat, new Point(greenBtn.x, greenBtn.y),
+                    new Point(greenBtn.width+greenBtn.x, greenBtn.height+greenBtn.y),
+                    black, 2);
             Utils.matToBitmap(altMat, altBmp);
             original = altBmp;
         }
@@ -171,7 +193,7 @@ public class VisualHelper {
         // Threshold and get contours
         Mat mask = new Mat(this.h, this.w, CvType.CV_8UC1);
         Mat output = new Mat(this.h, this.w, CvType.CV_8UC1);
-        Core.inRange(img, new Scalar(80, 170, 120), new Scalar(200, 255,250), mask);
+        Core.inRange(img, aedLower, aedUpper, mask);
         Core.bitwise_and(img, img, output, mask);
         Mat hierarchy = new Mat();
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
@@ -203,11 +225,11 @@ public class VisualHelper {
         Mat blur = new Mat(h, w, CvType.CV_8UC1);
         Utils.bitmapToMat(original, blur);
         // Preprocess image
-        Imgproc.blur(blur, blur, new Size(9,9));
+        Imgproc.blur(blur, blur, connBlur);
         Imgproc.cvtColor(blur, blur, Imgproc.COLOR_RGB2HSV);
         // Threshold and get contours
         Mat mask = new Mat(this.h, this.w, CvType.CV_8UC1);
-        Core.inRange(blur, new Scalar(10, 0, 150), new Scalar(70, 40, 240), mask);
+        Core.inRange(blur, connLower, connUpper, mask);
         // Find gray subsection of AED
         Rect gray = findSubsection(original, blur, mask);
         if (gray == this.defaultRect) {
@@ -223,7 +245,7 @@ public class VisualHelper {
             Utils.bitmapToMat(original, altMat);
             Imgproc.rectangle(altMat, new Point(conn.x, conn.y),
                     new Point(conn.width+conn.x, conn.height+conn.y),
-                    new Scalar(255, 255, 255), 2);
+                    white, 2);
             Utils.matToBitmap(altMat, altBmp);
             original = altBmp;
         }
@@ -272,7 +294,7 @@ public class VisualHelper {
         Mat aedMat = new Mat(h, w, CvType.CV_8UC1);
         Utils.bitmapToMat(original, aedMat);
         // Preprocess image
-        Imgproc.blur(aedMat, aedMat, new Size(17,17));
+        Imgproc.blur(aedMat, aedMat, aedBlur);
         Imgproc.cvtColor(aedMat, aedMat, Imgproc.COLOR_RGB2HSV);
         Rect aed = findAed(aedMat);
         if (aed == this.defaultRect) {
@@ -355,7 +377,7 @@ public class VisualHelper {
         // Threshold and get contours
         Mat mask = new Mat(this.h, this.w, CvType.CV_8UC1);
         Mat output = new Mat(this.h, this.w, CvType.CV_8UC1);
-        Core.inRange(img, new Scalar(0, 80, 190), new Scalar(100, 150, 230), mask);
+        Core.inRange(img, orangeLower, orangeUpper, mask);
         Core.bitwise_and(img, img, output, mask);
         Mat hierarchy = new Mat();
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
@@ -397,23 +419,23 @@ public class VisualHelper {
     }
 
     // Find green button on AED
-    private RotatedRect findGreenButton(Mat img, Rect rect) {
+    private Rect findGreenButton(Mat img, Rect rect) {
         double x1 = rect.x;
         double y1 = rect.y;
-        double w = rect.size().width;
-        double h = rect.size().height;
+        double w = rect.width;
+        double h = rect.height;
         double x2 = x1 + w;
         double y2 = y1 + h;
 
         // Threshold and get contours
         Mat mask = new Mat(this.h, this.w, CvType.CV_8UC1);
         Mat output = new Mat(this.h, this.w, CvType.CV_8UC1);
-        Core.inRange(img, new Scalar(4, 35, 77), new Scalar(100, 100, 200), mask);
+        Core.inRange(img, greenLower, greenUpper, mask);
         Core.bitwise_and(img, img, output, mask);
         Mat hierarchy = new Mat();
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Imgproc.findContours(mask.clone(), contours, hierarchy,
-                Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(mask, contours, hierarchy,
+                Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_NONE);
 
         // Find biggest contour
         MatOfPoint c;
@@ -421,7 +443,7 @@ public class VisualHelper {
         double a;
         double maxArea = 0;
         RotatedRect e;
-        RotatedRect maxEllipse = defaultRotatedRect;
+        Rect maxEllipse = defaultRect;
         int num;
         for (int i = 0; i < contours.size(); i++) {
             c = contours.get(i);
@@ -432,7 +454,7 @@ public class VisualHelper {
                 e = Imgproc.fitEllipse(c2f);
                 if (axisCheck(e.center.x, e.center.y, e.size.width-e.size.height, x1, y1, x2, y2)
                         && dimenCheck(e.size.width, e.size.height, a)) {
-                    maxEllipse = e;
+                    maxEllipse = e.boundingRect();
                     maxArea = a;
                 }
             }
