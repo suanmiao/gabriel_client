@@ -197,8 +197,8 @@ public class VisualHelper {
         Core.bitwise_and(img, img, output, mask);
         Mat hierarchy = new Mat();
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Imgproc.findContours(mask.clone(), contours, hierarchy,
-                Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(mask, contours, hierarchy,
+                Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_NONE);
 
         // Find biggest contour
         MatOfPoint c;
@@ -216,7 +216,7 @@ public class VisualHelper {
         return maxRect;
     }
 
-    private Bitmap connectorWrapper(Bitmap original) {
+    public Bitmap connectorWrapper(Bitmap original) {
         Mat altMat;
         Bitmap altBmp;
         int w = original.getWidth();
@@ -252,13 +252,14 @@ public class VisualHelper {
         return original;
     }
 
+    // Find gray subsection of AED; img must be blurred
     private Rect findSubsection(Bitmap original, Mat img, Mat mask) {
         Mat output = new Mat(this.h, this.w, CvType.CV_8UC1);
         Core.bitwise_and(img, img, output, mask);
         Mat hierarchy = new Mat();
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Imgproc.findContours(mask.clone(), contours, hierarchy,
-                Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(mask, contours, hierarchy,
+                Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_NONE);
 
         // Find biggest contour
         MatOfPoint c;
@@ -290,6 +291,8 @@ public class VisualHelper {
         }
     }
 
+    // When there are too many possible gray regions found, this function returns the gray region
+    // that overlaps with the red AED region as the most likely gray region
     private Rect compareGrayRed(List<MatOfPoint> contours, List<Double> areas, Bitmap original) {
         Mat aedMat = new Mat(h, w, CvType.CV_8UC1);
         Utils.bitmapToMat(original, aedMat);
@@ -332,6 +335,7 @@ public class VisualHelper {
         return minRect;
     }
 
+    // Finds connector on gray area of AED; img must be blurred
     private Rect findConnector(Rect rect, Mat mask) {
         int rw = rect.width;
         int rh = rect.height;
@@ -340,8 +344,8 @@ public class VisualHelper {
         // Find biggest contour to get contour
         Mat hierarchy = new Mat();
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Imgproc.findContours(mask.clone(), contours, hierarchy,
-                Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(crop, contours, hierarchy,
+                Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_NONE);
         double totalArea = rect.width * rect.height / 3;
         double maxArea = 240;
         Rect maxConn = this.defaultRect;
@@ -360,10 +364,13 @@ public class VisualHelper {
                 }
             }
         }
+        if (maxConn != this.defaultRect) {
+            return new Rect(rect.x+maxConn.x, rect.y+maxConn.y, maxConn.width, maxConn.height);
+        }
         return maxConn;
     }
 
-    // Find orange button on AED
+    // Find orange button on AED; img must be blurred
     private RotatedRect findOrangeButton(Mat img, Rect rect) {
         double x1 = rect.x;
         double y1 = rect.y;
@@ -381,8 +388,8 @@ public class VisualHelper {
         Core.bitwise_and(img, img, output, mask);
         Mat hierarchy = new Mat();
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Imgproc.findContours(mask.clone(), contours, hierarchy,
-                Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(mask, contours, hierarchy,
+                Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_NONE);
 
         // Find biggest contour
         MatOfPoint c;
@@ -400,8 +407,10 @@ public class VisualHelper {
                 a = Imgproc.contourArea(c);
                 e = Imgproc.fitEllipse(c2f);
                 if ((a > maxArea)
-                        && orangeCheck(e, x1, y1, x2, y2, a)
-                        && !((upperThird < e.center.y) || (e.center.y < lowerThird))) {
+                        && orangeCheck(e, x1, y1, x2, y2, a)){
+                    if ((upperThird < e.center.y) && (e.center.y < lowerThird)) {
+                        continue;
+                    }
                     maxArea = a;
                     maxEllipse = e;
                 }
@@ -418,7 +427,7 @@ public class VisualHelper {
             && (a < this.maxOrangeArea));
     }
 
-    // Find green button on AED
+    // Find green button on AED; img must be blurred
     private Rect findGreenButton(Mat img, Rect rect) {
         double x1 = rect.x;
         double y1 = rect.y;

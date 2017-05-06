@@ -187,12 +187,19 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
 
         //Example of how to use visualHelper
         visualHelper = new VisualHelper(this);
-        visualHelper.setVisibility(true, true, false, false); // set visibility of outlines
         Bitmap bmpImg = BitmapFactory.decodeResource(getResources(),
                 R.drawable.frame_100);
-        Bitmap bmp = visualHelper.greenWrapper(bmpImg); // WORK IN PROGRESS; still intregrating
+        // Find the green button:
+//        visualHelper.setVisibility(true, true, false, false); // Set visibility of outlines
+//        Bitmap bmp = visualHelper.greenWrapper(bmpImg);
+        // Find the orange button:
+//        visualHelper.setVisibility(true, false, true, false); // Set visibility of outlines
+//        Bitmap bmp = visualHelper.orangeWrapper(bmpImg);
+        // Find the connector:
+//        visualHelper.setVisibility(false, false, false, true); // Set visibility of outlines
+//        Bitmap bmp = visualHelper.connectorWrapper(bmpImg);
         // Saves output in Android Gallery
-        MediaStore.Images.Media.insertImage(getContentResolver(), bmp, "test" , "test");
+//        MediaStore.Images.Media.insertImage(getContentResolver(), bmp, "test" , "test");
     }
 
     private void initHiddenInfoPanel(){
