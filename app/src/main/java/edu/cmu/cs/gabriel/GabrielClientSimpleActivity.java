@@ -3,12 +3,15 @@ package edu.cmu.cs.gabriel;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Vibrator;
+import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.util.Log;
 import android.view.View;
@@ -56,6 +59,7 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
     private ResultReceivingThread resultThread = null;
     private TokenController tokenController = null;
 
+    private VisualHelper visualHelper;
     private boolean isRunning = false;
     private CameraPreview preview = null;
 
@@ -180,6 +184,23 @@ public class GabrielClientSimpleActivity extends BaseVoiceCommandActivity{
         mWindow = (ImageView)findViewById(R.id.camera_window);
         speechHelper.setVoiceInput(mHandler);
         initWidget();
+
+
+        //Example of how to use visualHelper
+        visualHelper = new VisualHelper(this);
+        Bitmap bmpImg = BitmapFactory.decodeResource(getResources(),
+                R.drawable.frame_100);
+        // Find the green button:
+//        visualHelper.setVisibility(true, true, false, false); // Set visibility of outlines
+//        Bitmap bmp = visualHelper.greenWrapper(bmpImg);
+        // Find the orange button:
+//        visualHelper.setVisibility(true, false, true, false); // Set visibility of outlines
+//        Bitmap bmp = visualHelper.orangeWrapper(bmpImg);
+        // Find the connector:
+//        visualHelper.setVisibility(false, false, false, true); // Set visibility of outlines
+//        Bitmap bmp = visualHelper.connectorWrapper(bmpImg);
+        // Saves output in Android Gallery
+//        MediaStore.Images.Media.insertImage(getContentResolver(), bmp, "test" , "test");
     }
 
     private void initHiddenInfoPanel(){
